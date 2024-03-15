@@ -57,7 +57,12 @@ export class ContinuousBatcher {
                 { threads: job.threads, temporary: true },
                 JSON.stringify(job)
             );
-            if (!jobPid) throw new Error(`Unable to deploy ${job.type}`);
+            if (!jobPid) {
+                this.ns.tprint(
+                    `Unable to deploy ${job.type} on server ${job.server}`
+                );
+                continue;
+            }
             const tPort = this.ns.getPortHandle(jobPid);
             job.pid = jobPid;
             await tPort.nextWrite();
