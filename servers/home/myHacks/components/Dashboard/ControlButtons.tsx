@@ -42,6 +42,7 @@ export const ControlButtons = ({ ns, mh, sm, hnm }: IControlButtonsProps) => {
 
         const sharePort = ns.peek(SHARE_PORT);
         if (sharePort === "NULL PORT DATA") {
+            ns.clearPort(SHARE_PORT);
             ns.writePort(SHARE_PORT, isSharing);
         }
     }, []);
@@ -79,9 +80,10 @@ export const ControlButtons = ({ ns, mh, sm, hnm }: IControlButtonsProps) => {
     };
 
     const onShare = () => {
-        isSharing === "true" ? setIsSharing("false") : setIsSharing("true");
+        const tempIsSharing = isSharing === "true" ? "false" : "true";
+        setIsSharing(tempIsSharing);
         ns.clearPort(SHARE_PORT);
-        ns.writePort(SHARE_PORT, isSharing);
+        ns.writePort(SHARE_PORT, tempIsSharing);
     };
 
     const onBuyServers = () => {

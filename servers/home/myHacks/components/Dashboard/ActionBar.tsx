@@ -4,11 +4,14 @@ import {
     watchSelectorForCreation,
 } from "../../utils/bitrunnerDOM";
 import { Col, Container, Row } from "react-bootstrap";
+import { ServerManager } from "../../ServerManger";
+import { MainHack } from "../../mainHack";
 
 export interface IActionBarProps {
     ns: NS;
+    mh: MainHack;
 }
-export const ActionBar = ({ ns }: IActionBarProps) => {
+export const ActionBar = ({ ns, mh }: IActionBarProps) => {
     const [focusFn, setFocusFn] = useState<() => void>();
     const [focus, setFocus] = useState(false);
 
@@ -194,7 +197,7 @@ export const ActionBar = ({ ns }: IActionBarProps) => {
                                 "background-color 150ms cubic-bezier(0.4, 0, 0.2, 1) 0ms",
                             color: "red",
                         }}
-                        onClick={focusFn}
+                        onClick={() => mh.killAll(false)}
                     >
                         <svg
                             className="MuiSvgIcon-root MuiSvgIcon-colorError MuiSvgIcon-fontSizeMedium"

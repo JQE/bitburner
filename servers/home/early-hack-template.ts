@@ -18,6 +18,7 @@ export async function main(ns: NS) {
     // Infinite loop that continously hacks/grows/weakens the target server
     while (true) {
         if (shareOnly === "true") {
+            ns.print("Is Sharing");
             await ns.share();
         } else {
             const security = ns.getServerSecurityLevel(target);
