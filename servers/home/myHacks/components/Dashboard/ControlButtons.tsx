@@ -9,6 +9,7 @@ import Form from "react-bootstrap/Form";
 import { HacknetManager } from "../../HacknetManager";
 import { RootState } from "../../state/store";
 import Container from "react-bootstrap/esm/Container";
+import { SHARE_PORT, TARGET_PORT } from "../../Constants";
 
 interface IControlButtonsProps {
     ns: NS;
@@ -23,6 +24,7 @@ export const ControlButtons = ({ ns, mh, sm, hnm }: IControlButtonsProps) => {
     );
     const [isHacking, setIsHacking] = useState(false);
     const [isBuying, setIsBuying] = useState(false);
+    const [isSharing, setIsSharing] = useState("false");
     const [isBuyHacknet, setIsBuyHacknet] = useState(hnm.isBuying());
     const [hacknetCount, setHacknetCount] = useState(hacknetsize);
     const [ramSize, setRamSize] = useState(8);
@@ -31,11 +33,16 @@ export const ControlButtons = ({ ns, mh, sm, hnm }: IControlButtonsProps) => {
     const dispatch = useAppDispatch();
 
     useEffect(() => {
-        const newTarget = ns.peek(1);
+        const newTarget = ns.peek(TARGET_PORT);
         if (newTarget === "NULL PORT DATA") {
-            ns.writePort(1, "n00dles");
+            ns.writePort(TARGET_PORT, "n00dles");
         } else {
             setTarget(newTarget);
+        }
+
+        const sharePort = ns.peek(SHARE_PORT);
+        if (sharePort === "NULL PORT DATA") {
+            ns.writePort(SHARE_PORT, isSharing);
         }
     }, []);
 
@@ -71,6 +78,12 @@ export const ControlButtons = ({ ns, mh, sm, hnm }: IControlButtonsProps) => {
         setIsHacking(mh.isHacking());
     };
 
+    const onShare = () => {
+        isSharing === "true" ? setIsSharing("false") : setIsSharing("true");
+        ns.clearPort(SHARE_PORT);
+        ns.writePort(SHARE_PORT, isSharing);
+    };
+
     const onBuyServers = () => {
         sm.buyServers();
         setIsBuying(sm.isBuying());
@@ -94,8 +107,8 @@ export const ControlButtons = ({ ns, mh, sm, hnm }: IControlButtonsProps) => {
 
     const onChangeTarget = (eventKey: string) => {
         setTarget(eventKey);
-        ns.clearPort(1);
-        ns.writePort(1, eventKey);
+        ns.clearPort(TARGET_PORT);
+        ns.writePort(TARGET_PORT, eventKey);
     };
 
     return (
@@ -113,6 +126,12 @@ export const ControlButtons = ({ ns, mh, sm, hnm }: IControlButtonsProps) => {
                     onClick={onHackTarget}
                 >
                     Hacking
+                </Button>
+                <Button
+                    variant={isSharing === "true" ? "danger" : "success"}
+                    onClick={onShare}
+                >
+                    XP Only
                 </Button>
                 <Dropdown onSelect={onChangeTarget} className="d-grid">
                     <Dropdown.Toggle variant="primary" id="serverSize">

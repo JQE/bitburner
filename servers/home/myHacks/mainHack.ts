@@ -10,6 +10,7 @@ export class MainHack {
     private ns: NS;
     private numTools: number = 0;
     private hacking: boolean = false;
+    private sharing: boolean = false;
     private initialized: boolean = false;
     private sm: ServerManager;
 
