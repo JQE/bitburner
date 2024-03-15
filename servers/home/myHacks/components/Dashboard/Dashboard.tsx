@@ -3,6 +3,7 @@ import { ServerManager } from "../../ServerManger";
 import { MainHack } from "../../mainHack";
 import { ActionBar } from "./ActionBar";
 import { ControlButtons } from "./ControlButtons";
+import { HackDisplay } from "./HackDisplay";
 import { HacknetDisplay } from "./HacknetDisplay";
 import { ServerDisplay } from "./ServerDisplay";
 import { StatsBar } from "./StatsBar";
@@ -44,12 +45,13 @@ export const Dashboard = ({ ns, mh, sm, hnm }: IDashboardProps) => {
             >
                 Overview
             </div>
-            <ActionBar ns={ns}></ActionBar>
+            <ActionBar ns={ns} mh={mh}></ActionBar>
             <StatsBar ns={ns}></StatsBar>
             {/*Add your code below here */}
             <ControlButtons ns={ns} mh={mh} sm={sm} hnm={hnm}></ControlButtons>
             <ServerDisplay ns={ns} sm={sm}></ServerDisplay>
             <HacknetDisplay hnm={hnm} ns={ns}></HacknetDisplay>
+            <HackDisplay ns={ns}></HackDisplay>
         </div>
     );
 };
