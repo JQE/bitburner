@@ -49,11 +49,7 @@ export const ControlButtons = ({ ns, mh, sm, hnm }: IControlButtonsProps) => {
 
     useEffect(() => {
         const servers = sm.getPublicServers();
-        const newList = [];
-        Object.keys(servers).forEach((server) => {
-            newList.push(server);
-        });
-        setServerList(newList);
+        setServerList(servers);
     }, []);
 
     const maxHacknet = useAppSelector(

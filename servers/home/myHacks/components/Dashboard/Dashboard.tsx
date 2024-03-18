@@ -22,7 +22,7 @@ export const Dashboard = ({ ns, mh, sm, hnm }: IDashboardProps) => {
             style={{
                 font: "12px",
                 height: "100%",
-                width: "12%",
+                width: "15%",
                 border: "2px solid",
                 borderColor: "yellow",
                 position: "fixed",

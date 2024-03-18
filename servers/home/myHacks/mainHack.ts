@@ -2,15 +2,10 @@ import React from "react";
 import { Server } from "NetscriptDefinitions";
 import { ServerManager } from "./ServerManger";
 
-interface Servers {
-    [name: string]: Server;
-}
-
 export class MainHack {
     private ns: NS;
     private numTools: number = 0;
     private hacking: boolean = false;
-    private sharing: boolean = false;
     private initialized: boolean = false;
     private sm: ServerManager;
 
@@ -65,7 +60,7 @@ export class MainHack {
         if (this.ns.fileExists("HTTPWorm.exe")) {
             numTools++;
         }
-        if (this.ns.fileExists("SQLInjext.exe")) {
+        if (this.ns.fileExists("SQLInject.exe")) {
             numTools++;
         }
         return numTools;
@@ -75,42 +70,29 @@ export class MainHack {
         this.ns.printf("Hacking servers.");
         const servers = this.sm.getPublicServers();
         const pservers = this.sm.getPrivateServers();
-        Object.entries(servers).forEach(([hostname, server]) => {
-            if (
-                server.numOpenPortsRequired !== undefined &&
-                server.numOpenPortsRequired <= this.numTools
-            ) {
-                this.ns.printf(
-                    "Hacking server %s with %d number of tools",
-                    server.hostname,
-                    server.numOpenPortsRequired
-                );
-                this.sm.prepServer(server);
+        servers.forEach((server) => {
+            const numOpenPortsRequired =
+                this.ns.getServerNumPortsRequired(server);
+            if (numOpenPortsRequired <= this.numTools) {
+                this.sm.prepServer(server, true);
             }
         });
-        Object.entries(pservers).forEach(([hostname, server]) => {
-            this.ns.printf(
-                "Hacking server %s with %d number of tools",
-                server.hostname,
-                server.numOpenPortsRequired
-            );
-            this.sm.prepServer(server);
+        pservers.forEach((server) => {
+            this.ns.printf("Hacking server %s", server);
+            this.sm.prepServer(server, true);
         });
     };
 
     killAll = (includeHome: boolean = false) => {
         const servers = this.sm.getPublicServers();
-        Object.entries(servers).forEach(([hostname, server]) => {
-            if (
-                (includeHome && server.hostname !== "home") ||
-                includeHome === false
-            ) {
-                this.ns.killall(server.hostname);
+        servers.forEach((server) => {
+            if ((includeHome && server !== "home") || includeHome === false) {
+                this.ns.killall(server);
             }
         });
         const pservers = this.sm.getPrivateServers();
-        Object.entries(pservers).forEach(([hostname, server]) => {
-            this.ns.killall(server.hostname);
+        pservers.forEach((server) => {
+            this.ns.killall(server);
         });
         this.ns.kill("early-hack-template.js");
     };
