@@ -21,7 +21,7 @@ export async function main(ns: NS) {
     body.style.display = "flex";
     const root = document.getElementById("root");
     root.style.flex = "1 1";
-    root.style.maxWidth = "88%";
+    root.style.maxWidth = "85%";
     root.style.overflow = "scroll";
     const defaultOverview: HTMLElement = document.querySelector(
         ".react-draggable:first-of-type"
@@ -39,7 +39,6 @@ export async function main(ns: NS) {
         document.body.appendChild(dashboard)
     );
     ns.atExit(() => {
-        ns.tprintf("Removing Dashboard");
         dashboard.remove();
         delete document.body.style.overflow;
         delete document.body.style.display;

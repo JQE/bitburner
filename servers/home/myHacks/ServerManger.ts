@@ -8,7 +8,7 @@ import {
 import { store } from "./state/store";
 
 export interface Servers {
-    [name: string]: Server;
+    name: string;
 }
 
 export class ServerManager {
@@ -41,22 +41,18 @@ export class ServerManager {
         return this.privateServers;
     };
 
-    private privateServers: Servers = {};
-    private publicServers: Servers = {};
+    private privateServers: string[] = [];
+    private publicServers: string[] = [];
 
     private recursiveScan = (target: string) => {
-        const neighbors = this.ns.scan(target);
-        for (let i = 0; i < neighbors.length; i++) {
-            const neighbor = neighbors[i];
-            if (
-                this.publicServers[neighbor] == undefined &&
-                !neighbor.startsWith("pserv") &&
-                neighbor !== "home"
-            ) {
-                this.publicServers[neighbor] = this.ns.getServer(neighbor);
-                this.recursiveScan(neighbor);
+        if (this.publicServers.includes(target)) return;
+        if (target.startsWith("pserv")) return;
+        this.publicServers.push(target);
+        const connectedNodes = this.ns.scan(target);
+        for (const node of connectedNodes)
+            if (node !== "Home" && !node.startsWith("pserv")) {
+                this.recursiveScan(node);
             }
-        }
     };
 
     private findAllPublicServers = () => {
@@ -67,15 +63,17 @@ export class ServerManager {
         const privateServers = this.ns.getPurchasedServers();
         this.privateServerCount = privateServers.length;
         privateServers.forEach((server) => {
-            if (this.privateServers[server] === undefined) {
-                this.privateServers[server] = this.ns.getServer(server);
+            if (!this.privateServers.includes(server)) {
+                this.privateServers.push(server);
             }
-            if (this.privateServers[server].maxRam < this.currentRamSize) {
-                this.currentRamSize = this.privateServers[server].maxRam;
+            const maxRam = this.ns.getServerMaxRam(server);
+            if (maxRam < this.currentRamSize) {
+                this.currentRamSize = maxRam;
             }
         });
-        Object.entries(this.privateServers).forEach(([hostname, server]) => {
-            if (server.maxRam >= this.currentRamSize) {
+        this.privateServers.forEach((server) => {
+            const maxRam = this.ns.getServerMaxRam(server);
+            if (maxRam >= this.currentRamSize) {
                 this.privateServersAtCurrentRam++;
             }
         });
@@ -96,75 +94,46 @@ export class ServerManager {
         store.dispatch(setServerCount(this.privateServersAtCurrentRam));
     };
 
-    prepServer = (target: Server) => {
-        if (!target.hasAdminRights) {
-            if (
-                target.numOpenPortsRequired !== undefined &&
-                target.numOpenPortsRequired >= 5 &&
-                target.hostname !== "home" &&
-                !target.hostname.startsWith("pserv")
-            ) {
-                this.ns.sqlinject(target.hostname);
+    prepServer = (target: string, hacking = false) => {
+        if (this.ns.hasRootAccess(target) === false) {
+            const portCount = this.ns.getServerNumPortsRequired(target);
+            if (portCount >= 5) {
+                this.ns.sqlinject(target);
             }
-            if (
-                target.numOpenPortsRequired !== undefined &&
-                target.numOpenPortsRequired >= 4 &&
-                target.hostname !== "home" &&
-                !target.hostname.startsWith("pserv")
-            ) {
-                this.ns.httpworm(target.hostname);
+            if (portCount >= 4) {
+                this.ns.httpworm(target);
             }
-            if (
-                target.numOpenPortsRequired !== undefined &&
-                target.numOpenPortsRequired >= 3 &&
-                target.hostname !== "home" &&
-                !target.hostname.startsWith("pserv")
-            ) {
-                this.ns.relaysmtp(target.hostname);
+            if (portCount >= 3) {
+                this.ns.relaysmtp(target);
             }
-            if (
-                target.numOpenPortsRequired !== undefined &&
-                target.numOpenPortsRequired >= 2 &&
-                target.hostname !== "home" &&
-                !target.hostname.startsWith("pserv")
-            ) {
-                this.ns.ftpcrack(target.hostname);
+            if (portCount >= 2) {
+                this.ns.ftpcrack(target);
             }
-            if (
-                target.numOpenPortsRequired !== undefined &&
-                target.numOpenPortsRequired >= 1 &&
-                target.hostname !== "home" &&
-                !target.hostname.startsWith("pserv")
-            ) {
-                this.ns.brutessh(target.hostname);
+            if (portCount >= 1) {
+                this.ns.brutessh(target);
             }
-            if (
-                target.hostname !== "home" &&
-                !target.hostname.startsWith("pserv")
-            ) {
-                this.ns.nuke(target.hostname);
-            }
+            this.ns.nuke(target);
         }
-        if (target.hostname !== "home") {
-            this.ns.scp(this.script, target.hostname);
+        if (target !== "home") {
+            this.ns.scp(this.script, target);
         }
+        if (hacking) {
+            const maxRam = this.ns.getServerMaxRam(target);
+            const ramUsed = this.ns.getServerUsedRam(target);
+            const numThreads = Math.floor((maxRam - ramUsed) / this.scriptMem);
 
-        const numThreads = Math.floor(
-            (target.maxRam - target.ramUsed) / this.scriptMem
-        );
-
-        if (numThreads > 0) {
-            this.ns.exec(this.script, target.hostname, numThreads);
+            if (numThreads > 0) {
+                this.ns.exec(this.script, target, numThreads);
+            }
         }
     };
 
     prepHome = () => {
-        const target = this.ns.getServer("home");
-        const numThreads = Math.floor(
-            ((target.maxRam - target.ramUsed) / this.scriptMem) * 0.8
-        );
+        const maxRam = this.ns.getServerMaxRam("home");
+        const ramUsed = this.ns.getServerUsedRam("home") + 16;
+        const numThreads = Math.floor((maxRam - ramUsed) / this.scriptMem);
         if (numThreads > 0) {
-            this.ns.exec(this.script, target.hostname, numThreads);
+            this.ns.exec(this.script, "home", numThreads);
         }
     };
 
@@ -197,45 +166,40 @@ export class ServerManager {
         const [ramSize, maxRamSize] = this.getCurrentRamStep();
         const serverCount = store.getState().servermanager.ServerCount;
         if (ramSize <= maxRamSize && serverCount < this.maxPrivateServers) {
-            Object.entries(this.privateServers).forEach(
-                ([hostname, server]) => {
-                    if (server.maxRam < ramSize) {
-                        const upgradeCost =
-                            this.ns.getPurchasedServerUpgradeCost(
-                                hostname,
-                                ramSize
-                            );
-                        if (
-                            this.ns.getServerMoneyAvailable("home") >
-                            upgradeCost
-                        ) {
-                            this.ns.upgradePurchasedServer(hostname, ramSize);
-                            this.privateServersAtCurrentRam++;
-                            store.dispatch(
-                                setServerCount(this.privateServersAtCurrentRam)
-                            );
-                            this.privateServers[hostname] =
-                                this.ns.getServer(hostname);
-                            this.ns.scriptKill(this.script, hostname);
-                            this.prepServer(this.ns.getServer(hostname));
-                        }
+            this.privateServers.forEach((server) => {
+                const maxRam = this.ns.getServerMaxRam(server);
+                if (maxRam < ramSize) {
+                    const upgradeCost = this.ns.getPurchasedServerUpgradeCost(
+                        server,
+                        ramSize
+                    );
+                    if (this.ns.getServerMoneyAvailable("home") > upgradeCost) {
+                        this.ns.upgradePurchasedServer(server, ramSize);
+                        this.privateServersAtCurrentRam++;
+                        store.dispatch(
+                            setServerCount(this.privateServersAtCurrentRam)
+                        );
+                        this.ns.scriptKill(this.script, server);
+                        this.prepServer(server);
                     }
                 }
-            );
+            });
         }
     };
 
     getCurrentRamStep = () => {
         let maxRamSize = store.getState().servermanager.MaxRam;
         let currentRamSize = maxRamSize;
-        Object.entries(this.privateServers).forEach(([hostname, server]) => {
-            if (server.maxRam < currentRamSize) {
-                currentRamSize = server.maxRam;
+        this.privateServers.forEach((server) => {
+            const maxRam = this.ns.getServerMaxRam(server);
+            if (maxRam < currentRamSize) {
+                currentRamSize = maxRam;
             }
         });
         let atRamSize = 0;
-        Object.entries(this.privateServers).forEach(([hostname, server]) => {
-            if (server.maxRam >= currentRamSize) {
+        this.privateServers.forEach((server) => {
+            const maxRam = this.ns.getServerMaxRam(server);
+            if (maxRam >= currentRamSize) {
                 atRamSize++;
             }
         });
@@ -245,13 +209,12 @@ export class ServerManager {
         ) {
             currentRamSize *= 2;
             atRamSize = 0;
-            Object.entries(this.privateServers).forEach(
-                ([hostname, server]) => {
-                    if (server.maxRam == currentRamSize) {
-                        atRamSize++;
-                    }
+            this.privateServers.forEach((server) => {
+                const maxRam = this.ns.getServerMaxRam(server);
+                if (maxRam == currentRamSize) {
+                    atRamSize++;
                 }
-            );
+            });
         }
         if (this.currentRamSize != currentRamSize) {
             this.currentRamSize = currentRamSize;
@@ -283,7 +246,6 @@ export class ServerManager {
         } else {
             const maxRamSize = store.getState().servermanager.MaxRam;
             if (this.currentRamSize !== maxRamSize) {
-                this.ns.printf("Updating ram size");
                 this.getCurrentRamStep();
             }
         }
