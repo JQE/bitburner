@@ -159,14 +159,16 @@ export class ServerManager {
         this.killAll(true);
         this.ns.clearPort(TARGET_PORT);
         this.ns.writePort(TARGET_PORT, store.getState().servermanager.Target);
+        this.ns.clearPort(SHARE_PORT);
+        this.ns.writePort(SHARE_PORT, "false");
         if (hack === true) {
+            this.ns.print(
+                `Hack Type: ${store.getState().servermanager.HackType}`
+            );
             if (store.getState().servermanager.HackType < 2) {
                 if (store.getState().servermanager.HackType === 1) {
                     this.ns.clearPort(SHARE_PORT);
                     this.ns.writePort(SHARE_PORT, "true");
-                } else {
-                    this.ns.clearPort(SHARE_PORT);
-                    this.ns.writePort(SHARE_PORT, "false");
                 }
                 if (this.initialized === false) {
                     this.initialize();
@@ -354,28 +356,25 @@ export class ServerManager {
                 this.upgradeServers();
             }
         }
-        if (serverManagerState.Hacking) {
-            if (this.checkTools()) {
-                await this.HackServers();
-            }
-        }
 
         if (this.isHacking !== serverManagerState.Hacking) {
             this.ns.clearLog();
             this.ns.print(`Updating Hacking`);
             this.isHacking = serverManagerState.Hacking;
             await this.HackServers();
+        } else if (this.isHacking === true) {
+            if (this.checkTools()) {
+                await this.HackServers();
+            }
         }
-        if (this.isHacking) {
-            const target = store.getState().servermanager.Target;
+
+        if (this.isHacking && serverManagerState.HackType < 2) {
             this.ns.print(
                 `Hacking Server ${store.getState().servermanager.Target}`
             );
         }
-        if (this.isHacking && store.getState().servermanager.HackType === 1) {
-            const sharePower = this.ns.getSharePower();
-            store.dispatch(SetShareValue(sharePower));
-        }
+        const sharePower = this.ns.getSharePower();
+        store.dispatch(SetShareValue(sharePower));
     };
 
     private startBatch = async () => {
