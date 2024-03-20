@@ -1,5 +1,4 @@
 import { NS } from "NetscriptDefinitions";
-import { ServerManager } from "../../myHacks/ServerManger";
 
 export class ServerUtils {
     private ns: NS;
@@ -278,7 +277,7 @@ export class ServerUtils {
                     const bMax = Math.floor(block.ram / 1.75);
                     let threads = 0;
                     if (wThreads1 > 0) {
-                        script = "./tWeaken.js";
+                        script = "/myHacks/batching/tWeaken.js";
                         metrics.type = "pWeaken1";
                         metrics.time = wTime;
                         metrics.end = wEnd1;
@@ -287,7 +286,7 @@ export class ServerUtils {
                             metrics.report = true;
                         wThreads1 -= threads;
                     } else if (wThreads2 > 0) {
-                        script = "./tWeaken.js";
+                        script = "/myHacks/batching/tWeaken.js";
                         metrics.type = "pWeaken2";
                         metrics.time = wTime;
                         metrics.end = wEnd2;
@@ -295,7 +294,7 @@ export class ServerUtils {
                         if (wThreads2 - threads === 0) metrics.report = true;
                         wThreads2 -= threads;
                     } else if (gThreads > 0 && mode === 1) {
-                        script = "./tGrow.js";
+                        script = "/myHacks/batching/tGrow.js";
                         metrics.type = "pGrow";
                         metrics.time = gTime;
                         metrics.end = gEnd;
@@ -303,7 +302,7 @@ export class ServerUtils {
                         metrics.report = false;
                         gThreads -= threads;
                     } else if (gThreads > 0 && bMax >= gThreads) {
-                        script = "./tGrow.js";
+                        script = "/myHacks/batching/tGrow.js";
                         metrics.type = "pGrow";
                         metrics.time = gTime;
                         metrics.end = gEnd;
@@ -318,7 +317,10 @@ export class ServerUtils {
                         { threads: threads, temporary: true },
                         JSON.stringify(metrics)
                     );
-                    if (!pid) throw new Error("Unable to assign all jobs.");
+                    if (!pid)
+                        throw new Error(
+                            `Unable to assign all jobs. ${script} ${block.server} ${threads}`
+                        );
                     block.ram -= 1.75 * threads;
                 }
             }

@@ -1,4 +1,4 @@
-import { BatchUtils } from "../ServerUtils";
+import { ServerUtils } from "./ServerUtils";
 
 export interface Infos {
     hack: number;
@@ -9,7 +9,7 @@ export interface Infos {
 
 export class Metrics {
     ns: NS;
-    utils: BatchUtils;
+    utils: ServerUtils;
     target: string;
     maxMoney: number;
     money: number;
