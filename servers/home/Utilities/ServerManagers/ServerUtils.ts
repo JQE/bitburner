@@ -1,7 +1,7 @@
 import { NS } from "NetscriptDefinitions";
-import { ServerManager } from "../ServerManger";
+import { ServerManager } from "../../myHacks/ServerManger";
 
-export class BatchUtils {
+export class ServerUtils {
     private ns: NS;
 
     constructor(ns: NS) {
@@ -156,6 +156,30 @@ export class BatchUtils {
             ) {
                 this.ns.scp(script, server);
             }
+        }
+    };
+
+    nukeTarget = (server: string, toolCount: number): boolean => {
+        if (this.ns.hasRootAccess(server)) return true;
+
+        const numPorts = this.ns.getServerNumPortsRequired(server);
+        if (numPorts <= toolCount) {
+            if (numPorts >= 5) {
+                this.ns.sqlinject(server);
+            }
+            if (numPorts >= 4) {
+                this.ns.httpworm(server);
+            }
+            if (numPorts >= 3) {
+                this.ns.relaysmtp(server);
+            }
+            if (numPorts >= 2) {
+                this.ns.ftpcrack(server);
+            }
+            if (numPorts >= 1) {
+                this.ns.brutessh(server);
+            }
+            this.ns.nuke(server);
         }
     };
 

@@ -113,7 +113,7 @@ export class MainHack {
     processHackActivity = () => {
         if (this.hacking) {
             const newNumTools = this.countTools();
-            if (newNumTools < this.numTools) {
+            if (newNumTools > this.numTools) {
                 this.numTools = newNumTools;
                 this.restartHack();
             }

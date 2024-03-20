@@ -21,21 +21,26 @@ export async function main(ns: NS) {
         throw new Error("target is required");
     }
 
-    let found = false;
-    const recursiveScan = (current: string) => {
+    const recursiveScan = (current: string, parent: string[]) => {
         if (current === target) {
-            found = true;
-            ns.tprint(`Step: ${current}`);
-            return;
-        }
-        if (found === true) {
-            ns.tprint(`Step ${current}`);
+            let i = 0;
+            parent.forEach((server) => {
+                ++i;
+                if (i === 10) {
+                    ns.tprintf(`\u001b[33m${server}`);
+                } else {
+                    ns.tprintf(server);
+                }
+            });
             return;
         }
         const servers = ns.scan(current);
+        if (current !== "home") servers.shift();
         for (const server of servers) {
-            recursiveScan(server);
+            parent.push(server);
+            recursiveScan(server, parent);
+            parent.pop();
         }
     };
-    recursiveScan("home");
+    recursiveScan("home", []);
 }

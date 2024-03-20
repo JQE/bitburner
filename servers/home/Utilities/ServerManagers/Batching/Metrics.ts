@@ -1,4 +1,4 @@
-import { BatchUtils } from "./utils";
+import { BatchUtils } from "../ServerUtils";
 
 export interface Infos {
     hack: number;

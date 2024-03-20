@@ -73,9 +73,13 @@ export const StatsBar = ({ ns }: IStatsProps) => {
 
     useEffect(() => {
         processStats();
-        watchSelectorForUpdates("span", () => {
+        const watcher = watchSelectorForUpdates("span", () => {
             processStats();
         });
+
+        return () => {
+            watcher.cleanup();
+        };
     }, []);
 
     return (

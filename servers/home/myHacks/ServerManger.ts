@@ -60,21 +60,12 @@ export class ServerManager {
     };
 
     private findAllPrivateServers = () => {
-        const privateServers = this.ns.getPurchasedServers();
-        this.privateServerCount = privateServers.length;
-        privateServers.forEach((server) => {
-            if (!this.privateServers.includes(server)) {
-                this.privateServers.push(server);
-            }
+        this.privateServers = this.ns.getPurchasedServers();
+        this.privateServerCount = this.privateServers.length;
+        this.privateServers.forEach((server) => {
             const maxRam = this.ns.getServerMaxRam(server);
             if (maxRam < this.currentRamSize) {
                 this.currentRamSize = maxRam;
-            }
-        });
-        this.privateServers.forEach((server) => {
-            const maxRam = this.ns.getServerMaxRam(server);
-            if (maxRam >= this.currentRamSize) {
-                this.privateServersAtCurrentRam++;
             }
         });
         const ramSize = store.getState().servermanager.MaxRam;
@@ -157,8 +148,9 @@ export class ServerManager {
             );
             this.privateServerCount++;
             this.privateServersAtCurrentRam++;
+            store.dispatch(setCurrentRam(8));
             store.dispatch(setServerCount(this.privateServersAtCurrentRam));
-            this.privateServers[hostname] = this.ns.getServer(hostname);
+            this.privateServers.push(hostname);
         }
     };
 
@@ -239,7 +231,6 @@ export class ServerManager {
         if (this.buying) {
             if (this.privateServerCount < this.maxPrivateServers) {
                 this.purchaseServers();
-                this.getCurrentRamStep();
             } else {
                 this.upgradeServers();
             }
