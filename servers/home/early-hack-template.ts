@@ -4,7 +4,7 @@ export async function main(ns: NS) {
     // that we're going to hack. In this case, it's "n00dles"
 
     let target = ns.peek(1);
-    let shareOnly = ns.peek(2);
+    let shareOnly = ns.peek(8);
 
     // Defines how much money a server should have before we hack it
     // In this case, it is set to the maximum amount of money.
@@ -46,7 +46,7 @@ export async function main(ns: NS) {
                 ns.printf("Running hack");
                 await ns.hack(target);
             }
-            shareOnly = ns.peek(2);
+            shareOnly = ns.peek(8);
             const newTarget = ns.peek(1);
             if (newTarget !== target) {
                 target = newTarget;

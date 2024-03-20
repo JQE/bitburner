@@ -16,7 +16,7 @@ export const ActionBar = ({ ns, mh }: IActionBarProps) => {
     const [focus, setFocus] = useState(false);
 
     const watch = () => {
-        watchSelectorForCreation("button", (element) => {
+        const watcher = watchSelectorForCreation("button", (element) => {
             if (element.innerText === "Focus") {
                 setFocus(true);
                 if (focusFn === undefined) {
@@ -28,6 +28,7 @@ export const ActionBar = ({ ns, mh }: IActionBarProps) => {
                 });
             }
         });
+        return watcher;
     };
     const saveBtn: HTMLElement = document.querySelector(
         'button[aria-label="save game"]'
@@ -35,7 +36,10 @@ export const ActionBar = ({ ns, mh }: IActionBarProps) => {
     const saveFn = saveBtn[Object.keys(saveBtn)[1]].onClick;
 
     useEffect(() => {
-        watch();
+        const watcher = watch();
+        return () => {
+            watcher.cleanup();
+        };
     }, []);
 
     return (

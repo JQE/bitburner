@@ -1,5 +1,5 @@
 export async function main(ns: NS) {
-    const target = "n00dles";
+    const target = "joesguns";
     // Defines how much money a server should have before we hack it
     // In this case, it is set to the maximum amount of money.
     let moneyThresh = ns.getServerMaxMoney(target);

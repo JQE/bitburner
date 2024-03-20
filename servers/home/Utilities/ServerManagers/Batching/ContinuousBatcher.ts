@@ -1,14 +1,14 @@
 import { NS, NetscriptPort } from "NetscriptDefinitions";
-import { BatchUtils } from "./utils";
+import { ServerUtils } from "../ServerUtils";
 import { Deque } from "./Dequeue";
-import { SCRIPTS, TYPES, WORKERS } from "./Constants";
+import { SCRIPTS, TYPES, WORKERS } from "../../../myHacks/batching/Constants";
 import { Job } from "./Job";
 import { Metrics } from "./Metrics";
 import { RamNet } from "./RamNet";
 
 export class ContinuousBatcher {
     ns: NS;
-    utils: BatchUtils;
+    utils: ServerUtils;
     metrics: Metrics;
     ramNet: RamNet;
     target: string;
@@ -16,10 +16,11 @@ export class ContinuousBatcher {
     dataPort: NetscriptPort;
     batchCount: number = 0;
     desyncs: number = 0;
+    batching: boolean = false;
 
     running = new Map();
 
-    constructor(ns: NS, metrics: Metrics, ramNet: RamNet, utils: BatchUtils) {
+    constructor(ns: NS, metrics: Metrics, ramNet: RamNet, utils: ServerUtils) {
         this.ns = ns;
         this.utils = utils;
         this.metrics = metrics;
@@ -114,7 +115,12 @@ export class ContinuousBatcher {
             ns.print(`Hacks cancelled by desync: ${this.desyncs}`);
     }
 
+    end = () => {
+        this.batching = false;
+    };
+
     run = async () => {
+        this.batching = true;
         // First we do some initial setup, this is essentially firing off a shotgun blast to get us started.
         this.ns.print("Setting shotgun to start");
         const dataPort = this.dataPort;
@@ -122,7 +128,7 @@ export class ContinuousBatcher {
         await this.deploy();
         await this.ns.sleep(0); // This is probably pointless. I forget why I put it here.
         this.log();
-        while (true) {
+        while (this.batching) {
             // Wait for the nextWrite, as usual.
             await dataPort.nextWrite();
 
@@ -174,65 +180,4 @@ export class ContinuousBatcher {
             }
         }
     };
-}
-
-export async function main(ns) {
-    ns.disableLog("ALL");
-    ns.tail();
-
-    /*
-	This commented out code is for a debugging tool that centralizes logs from the worker scripts into one place.
-	It's main advantage is the ability to write txt logs to file, which can be perused later to track down errors.
-	You can uncomment it if you'd like to see a live stream of workers finishing without flooding the terminal.
-
-	If you do, make sure to search the file for -LOGGING and uncomment all relevant lines.
-	*/
-    // if (ns.isRunning("/part4/logHelper.js", "home")) ns.kill("/part4/logHelper.js", "home");
-    // const logPort = ns.exec("/part4/logHelper.js", "home");
-    // ns.atExit(() => ns.closeTail(logPort));
-
-    // Setup is mostly the same.
-    const dataPort = ns.getPortHandle(ns.pid);
-    dataPort.clear();
-    let target = ns.args[0] ? ns.args[0] : "n00dles";
-    ns.print(`Target: ${target}`);
-    const utils = new BatchUtils(ns);
-    while (true) {
-        const servers = utils.getServers((server) => {
-            if (!ns.args[0])
-                target = utils.checkTarget(
-                    server,
-                    target,
-                    ns.fileExists("Formulas.exe", "home")
-                );
-            utils.copyScripts(server, WORKERS, true);
-            return ns.hasRootAccess(server);
-        });
-        const ramNet = new RamNet(ns, servers);
-        const metrics = new Metrics(ns, utils, target);
-        // metrics.log = logPort; // Uncomment for -LOGGING.
-        if (!utils.isPrepped(target)) await utils.prep(metrics, ramNet);
-        ns.clearLog();
-        ns.print("Optimizing. This may take a few seconds...");
-
-        // Optimizer has changed again. Back to being synchronous, since the performance is much better.
-        await utils.optimizePeriodic(metrics, ramNet);
-        metrics.calculate();
-
-        // Create and run our batcher.
-        const batcher = new ContinuousBatcher(ns, metrics, ramNet, utils);
-        await batcher.run();
-
-        /*
-		You might be wondering why I put this in a while loop and then just return here. The simple answer is that
-		it's because this is meant to be run in a loop, but I didn't implement the logic for it. This version of the
-		batcher is completely static once created. It sticks to a single greed value, and doesn't update if more
-		RAM becomes available.
-
-		In a future version, you'd want some logic to allow the batcher to choose new targets, update its available RAM,
-		and create new batchers during runtime. For now, that's outside the scope of this guide, but consider this loop
-		as a sign of what could be.
-		*/
-        return;
-    }
 }
