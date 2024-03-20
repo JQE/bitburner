@@ -1,4 +1,4 @@
-import { RESERVED_HOME_RAM } from "../../../myHacks/batching/Constants";
+import { RESERVED_HOME_RAM } from "./Constants";
 
 export interface Block {
     server: string;

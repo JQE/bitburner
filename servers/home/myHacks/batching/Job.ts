@@ -1,4 +1,4 @@
-import { COSTS } from "../../../myHacks/batching/Constants";
+import { COSTS } from "./Constants";
 import { Metrics } from "./Metrics";
 
 export class Job {

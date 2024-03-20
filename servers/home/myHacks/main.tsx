@@ -1,7 +1,6 @@
-import { Dashboard } from "./components/Dashboard/Dashboard";
+import { Dashboard } from "./components/Dashboard";
 import React from "react";
 import ReactDOM from "react-dom";
-import { MainHack } from "./mainHack";
 import { ServerManager } from "./ServerManger";
 import { Provider } from "react-redux";
 import { store } from "./state/store";
@@ -12,11 +11,11 @@ export async function main(ns: NS) {
     ns.disableLog("ALL");
 
     ns.disableLog("asleep");
+    let running = true;
     const sm = new ServerManager(ns);
-    const mh = new MainHack(ns, sm);
     const hnm = new HacknetManager(ns);
 
-    const body = document.body;
+    /*const body = document.body;
     body.style.overflow = "hidden";
     body.style.display = "flex";
     const root = document.getElementById("root");
@@ -28,18 +27,20 @@ export async function main(ns: NS) {
     );
     if (defaultOverview != undefined) {
         defaultOverview.style.display = "none";
-    }
+    }*/
 
-    const dashboard = document.createElement("div");
-    ReactDOM.render(
-        <Provider store={store}>
-            <Style></Style>
-            <Dashboard ns={ns} mh={mh} sm={sm} hnm={hnm}></Dashboard>
-        </Provider>,
-        document.body.appendChild(dashboard)
-    );
-    ns.atExit(() => {
-        dashboard.remove();
+    const table = document.getElementById("overview-extra-hook-0").parentElement
+        .parentElement.parentElement.parentElement;
+    table.style.display = "table";
+    table.style.width = "90%";
+    const menu = document.createElement("div");
+    table.after(menu);
+    //const hook1 = document.getElementById("overview-extra-hook-1");
+    const onQuit = async () => {
+        running = false;
+        await sm.cleanup();
+        menu.remove();
+        /*dashboard.remove();
         delete document.body.style.overflow;
         delete document.body.style.display;
         const rootcleanup = document.getElementById("root");
@@ -51,13 +52,22 @@ export async function main(ns: NS) {
         );
         if (defaultOverview != undefined) {
             defaultOverview.style.display = "flex";
-        }
+        }*/
+    };
+    ReactDOM.render(
+        <Provider store={store}>
+            <Style></Style>
+            <Dashboard ns={ns} sm={sm} hnm={hnm} onQuit={onQuit}></Dashboard>
+        </Provider>,
+        menu
+    );
+    ns.atExit(() => {
+        onQuit();
     });
 
-    while (ns.scriptRunning("/myHacks/main.js", "home")) {
+    while (running) {
         await ns.asleep(1000); // script must be running in bitburner for ns methods to function inside our component
-        sm.processServerActivity();
-        mh.processHackActivity();
-        await hnm.processHacknetActivity();
+        await sm.processServerActivity();
+        hnm.processHacknetActivity();
     }
 }

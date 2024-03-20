@@ -1,11 +1,22 @@
 import { Server } from "NetscriptDefinitions";
 import {
-    setCurrentRam,
-    setMaxRam,
-    setMaxServers,
-    setServerCount,
+    SetCurrentRam,
+    SetMaxRam,
+    SetMaxServers,
+    SetServerCount,
+    SetAtRam,
+    SetTarget,
+    SetBuying,
+    SetHacking,
+    SetShareValue,
 } from "./state/ServerManager/ServerManagerSlice";
 import { store } from "./state/store";
+import { RamNet } from "./batching/RamNet";
+import { Metrics } from "./batching/Metrics";
+import { ServerUtils } from "./batching/ServerUtils";
+import { WORKERS } from "./batching/Constants";
+import { ContinuousBatcher } from "./batching/ContinuousBatcher";
+import { SHARE_PORT, TARGET_PORT } from "./Constants";
 
 export interface Servers {
     name: string;
@@ -15,20 +26,21 @@ export class ServerManager {
     private ns: NS;
     private scriptMem: number = 0;
     private script = "early-hack-template.js";
-    private buying = false;
-    private privateServerCount = 0;
-    private privateServersAtCurrentRam = 0;
-    private maxPrivateServers = 0;
-    private currentRamSize = 99999999999;
+    private numTools: number = 0;
+    private initialized: boolean = false;
+    private batcher: ContinuousBatcher;
+    private isHacking: boolean = false;
+    private utils: ServerUtils;
 
     constructor(ns) {
         this.ns = ns;
-        this.maxPrivateServers = this.ns.getPurchasedServerLimit();
-        store.dispatch(setMaxServers(this.maxPrivateServers));
+        this.utils = new ServerUtils(ns);
+        store.dispatch(SetMaxServers(this.ns.getPurchasedServerLimit()));
         this.scriptMem = this.ns.getScriptRam(this.script);
-        store.dispatch(setCurrentRam(8));
-        store.dispatch(setServerCount(0));
-        store.dispatch(setMaxRam(8));
+        const pmax = this.ns.getPurchasedServerMaxRam();
+        store.dispatch(SetCurrentRam(pmax));
+        store.dispatch(SetServerCount(0));
+        store.dispatch(SetMaxRam(8));
         this.findAllPublicServers();
         this.findAllPrivateServers();
     }
@@ -61,31 +73,44 @@ export class ServerManager {
 
     private findAllPrivateServers = () => {
         this.privateServers = this.ns.getPurchasedServers();
-        this.privateServerCount = this.privateServers.length;
-        this.privateServers.forEach((server) => {
-            const maxRam = this.ns.getServerMaxRam(server);
-            if (maxRam < this.currentRamSize) {
-                this.currentRamSize = maxRam;
+        store.dispatch(SetServerCount(this.privateServers.length));
+        if (this.privateServers.length === 0) {
+            store.dispatch(SetAtRam(0));
+            store.dispatch(SetCurrentRam(8));
+        } else {
+            this.privateServers.forEach((server) => {
+                const maxRam = this.ns.getServerMaxRam(server);
+                if (maxRam < store.getState().servermanager.CurrentRam) {
+                    store.dispatch(SetCurrentRam(maxRam));
+                }
+            });
+
+            if (
+                store.getState().servermanager.Count >=
+                    store.getState().servermanager.Max &&
+                store.getState().servermanager.CurrentRam <
+                    store.getState().servermanager.MaxRam
+            ) {
+                store.dispatch(
+                    SetCurrentRam(store.getState().servermanager.CurrentRam * 2)
+                );
+                let atRam = 0;
+                this.privateServers.forEach((server) => {
+                    const maxRam = this.ns.getServerMaxRam(server);
+                    if (maxRam >= store.getState().servermanager.CurrentRam) {
+                        atRam++;
+                    }
+                });
+                store.dispatch(SetAtRam(atRam));
             }
-        });
-        const ramSize = store.getState().servermanager.MaxRam;
-        if (
-            this.privateServersAtCurrentRam === this.maxPrivateServers &&
-            this.currentRamSize < ramSize
-        ) {
-            this.privateServersAtCurrentRam = 0;
-            this.currentRamSize = this.currentRamSize * 2;
         }
-        this.ns.printf("Current Ram Size %d", this.currentRamSize);
-        store.dispatch(setCurrentRam(this.currentRamSize));
         this.ns.printf(
-            "Writing server count to port %d",
-            this.privateServersAtCurrentRam
+            "Current Ram Size %d",
+            store.getState().servermanager.CurrentRam
         );
-        store.dispatch(setServerCount(this.privateServersAtCurrentRam));
     };
 
-    prepServer = (target: string, hacking = false) => {
+    private prepServer = (target: string, hacking = false) => {
         if (this.ns.hasRootAccess(target) === false) {
             const portCount = this.ns.getServerNumPortsRequired(target);
             if (portCount >= 5) {
@@ -119,7 +144,7 @@ export class ServerManager {
         }
     };
 
-    prepHome = () => {
+    private prepHome = () => {
         const maxRam = this.ns.getServerMaxRam("home");
         const ramUsed = this.ns.getServerUsedRam("home") + 16;
         const numThreads = Math.floor((maxRam - ramUsed) / this.scriptMem);
@@ -128,36 +153,58 @@ export class ServerManager {
         }
     };
 
-    buyServers = () => {
-        this.buying = !this.buying;
-    };
-    isBuying = () => {
-        return this.buying;
+    private HackServers = async () => {
+        const hack = store.getState().servermanager.Hacking;
+        this.ns.print(`Killing all processes`);
+        this.killAll(true);
+        this.ns.clearPort(TARGET_PORT);
+        this.ns.writePort(TARGET_PORT, store.getState().servermanager.Target);
+        if (hack === true) {
+            if (store.getState().servermanager.HackType < 2) {
+                if (store.getState().servermanager.HackType === 1) {
+                    this.ns.clearPort(SHARE_PORT);
+                    this.ns.writePort(SHARE_PORT, "true");
+                } else {
+                    this.ns.clearPort(SHARE_PORT);
+                    this.ns.writePort(SHARE_PORT, "false");
+                }
+                if (this.initialized === false) {
+                    this.initialize();
+                } else {
+                    await this.hackServers();
+                }
+            } else {
+                await this.startBatch();
+            }
+        } else {
+            this.ns.print(`Stopping batch`);
+            await this.stopBatch();
+        }
     };
 
     private purchaseServers = () => {
-        const ram = 8;
-        this.currentRamSize = 8;
+        let count = store.getState().servermanager.Count;
         if (
             this.ns.getServerMoneyAvailable("home") >
-            this.ns.getPurchasedServerCost(ram)
+            this.ns.getPurchasedServerCost(8)
         ) {
-            const hostname = this.ns.purchaseServer(
-                "pserv-" + this.privateServerCount,
-                ram
-            );
-            this.privateServerCount++;
-            this.privateServersAtCurrentRam++;
-            store.dispatch(setCurrentRam(8));
-            store.dispatch(setServerCount(this.privateServersAtCurrentRam));
-            this.privateServers.push(hostname);
+            const hostname = this.ns.purchaseServer("pserv-" + count, 8);
+            if (hostname !== "") {
+                count++;
+                store.dispatch(SetServerCount(count));
+                store.dispatch(SetAtRam(count));
+                this.privateServers.push(hostname);
+            }
         }
     };
 
     private upgradeServers = () => {
         const [ramSize, maxRamSize] = this.getCurrentRamStep();
-        const serverCount = store.getState().servermanager.ServerCount;
-        if (ramSize <= maxRamSize && serverCount < this.maxPrivateServers) {
+        this.ns.print(`Ram: ${ramSize} Max: ${maxRamSize}`);
+        const max = store.getState().servermanager.Count;
+        let atRam = store.getState().servermanager.AtRam;
+        this.ns.print(`Count: ${max} AtRam: ${atRam}`);
+        if (ramSize <= maxRamSize && atRam < max) {
             this.privateServers.forEach((server) => {
                 const maxRam = this.ns.getServerMaxRam(server);
                 if (maxRam < ramSize) {
@@ -167,19 +214,17 @@ export class ServerManager {
                     );
                     if (this.ns.getServerMoneyAvailable("home") > upgradeCost) {
                         this.ns.upgradePurchasedServer(server, ramSize);
-                        this.privateServersAtCurrentRam++;
-                        store.dispatch(
-                            setServerCount(this.privateServersAtCurrentRam)
-                        );
+                        atRam++;
                         this.ns.scriptKill(this.script, server);
                         this.prepServer(server);
                     }
                 }
             });
+            store.dispatch(SetAtRam(atRam));
         }
     };
 
-    getCurrentRamStep = () => {
+    private getCurrentRamStep = () => {
         let maxRamSize = store.getState().servermanager.MaxRam;
         let currentRamSize = maxRamSize;
         this.privateServers.forEach((server) => {
@@ -188,6 +233,7 @@ export class ServerManager {
                 currentRamSize = maxRam;
             }
         });
+
         let atRamSize = 0;
         this.privateServers.forEach((server) => {
             const maxRam = this.ns.getServerMaxRam(server);
@@ -196,7 +242,7 @@ export class ServerManager {
             }
         });
         if (
-            atRamSize === this.maxPrivateServers &&
+            atRamSize === store.getState().servermanager.Max &&
             currentRamSize < maxRamSize
         ) {
             currentRamSize *= 2;
@@ -207,38 +253,136 @@ export class ServerManager {
                     atRamSize++;
                 }
             });
-        }
-        if (this.currentRamSize != currentRamSize) {
-            this.currentRamSize = currentRamSize;
-            this.privateServersAtCurrentRam = atRamSize;
-            store.dispatch(setCurrentRam(this.currentRamSize));
-            store.dispatch(setServerCount(this.privateServersAtCurrentRam));
+            store.dispatch(SetCurrentRam(currentRamSize));
+            store.dispatch(SetAtRam(atRamSize));
         }
         return [currentRamSize, maxRamSize];
     };
 
-    getMaxServers = () => {
-        return this.maxPrivateServers;
-    };
-    getAtRam = () => {
-        return this.privateServersAtCurrentRam;
-    };
-    getRamSize = () => {
-        return this.currentRamSize;
+    private countTools = (): number => {
+        let numTools = 0;
+        if (this.ns.fileExists("BruteSSH.exe")) {
+            numTools++;
+        }
+        if (this.ns.fileExists("FTPCrack.exe")) {
+            numTools++;
+        }
+        if (this.ns.fileExists("relaySMTP.exe")) {
+            numTools++;
+        }
+        if (this.ns.fileExists("HTTPWorm.exe")) {
+            numTools++;
+        }
+        if (this.ns.fileExists("SQLInject.exe")) {
+            numTools++;
+        }
+        return numTools;
     };
 
-    processServerActivity = () => {
-        if (this.buying) {
-            if (this.privateServerCount < this.maxPrivateServers) {
+    private checkTools = () => {
+        const newToolCount = this.countTools();
+        if (newToolCount !== this.numTools) {
+            this.numTools = newToolCount;
+            return true;
+        }
+        return false;
+    };
+
+    private hackServers = () => {
+        this.ns.printf("Hacking servers.");
+        const servers = this.getPublicServers();
+        const pservers = this.getPrivateServers();
+        servers.forEach((server) => {
+            const numOpenPortsRequired =
+                this.ns.getServerNumPortsRequired(server);
+            if (numOpenPortsRequired <= this.numTools) {
+                this.prepServer(server, true);
+            }
+        });
+        pservers.forEach((server) => {
+            this.prepServer(server, true);
+        });
+        this.prepHome();
+    };
+
+    private initialize = () => {
+        this.numTools = this.countTools();
+        this.hackServers();
+        this.initialized = true;
+    };
+
+    killAll = (includeHome: boolean = false) => {
+        const servers = this.getPublicServers();
+        servers.forEach((server) => {
+            if (server !== "home") {
+                this.ns.killall(server);
+            }
+        });
+        const pservers = this.getPrivateServers();
+        pservers.forEach((server) => {
+            this.ns.killall(server);
+        });
+        if (includeHome) {
+            this.ns.ps("home").forEach((service) => {
+                if (service.filename !== "myHacks/main.js") {
+                    this.ns.kill(service.filename, "home", ...service.args);
+                }
+            });
+        }
+    };
+
+    cleanup = async () => {
+        if (store.getState().servermanager.HackType === 2) {
+            await this.stopBatch();
+        }
+        this.killAll(true);
+    };
+
+    processServerActivity = async () => {
+        this.ns.clearLog();
+        const serverManagerState = store.getState().servermanager;
+        if (serverManagerState.Buying) {
+            if (serverManagerState.Count < serverManagerState.Max) {
+                this.ns.print(
+                    `Buying Servers ${serverManagerState.Count} / ${serverManagerState.Max}`
+                );
                 this.purchaseServers();
             } else {
+                this.ns.print(
+                    `Upgrading Servers ${serverManagerState.Count} / ${serverManagerState.Max}`
+                );
                 this.upgradeServers();
             }
-        } else {
-            const maxRamSize = store.getState().servermanager.MaxRam;
-            if (this.currentRamSize !== maxRamSize) {
-                this.getCurrentRamStep();
+        }
+        if (serverManagerState.Hacking) {
+            if (this.checkTools()) {
+                await this.HackServers();
             }
         }
+
+        if (this.isHacking !== serverManagerState.Hacking) {
+            this.ns.clearLog();
+            this.ns.print(`Updating Hacking`);
+            this.isHacking = serverManagerState.Hacking;
+            await this.HackServers();
+        }
+        if (this.isHacking) {
+            const target = store.getState().servermanager.Target;
+            this.ns.print(
+                `Hacking Server ${store.getState().servermanager.Target}`
+            );
+        }
+        if (this.isHacking && store.getState().servermanager.HackType === 1) {
+            const sharePower = this.ns.getSharePower();
+            store.dispatch(SetShareValue(sharePower));
+        }
+    };
+
+    private startBatch = async () => {
+        this.ns.exec("/myHacks/batching/ContinuousBatcher.js", "home");
+    };
+
+    private stopBatch = async () => {
+        this.ns.kill("/myHacks/batching/ContinuousBatcher.js", "home");
     };
 }

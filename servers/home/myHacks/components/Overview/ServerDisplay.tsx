@@ -1,27 +1,23 @@
-import React, { useEffect } from "react";
-import { useState } from "react";
-import { SHARE_PORT } from "../../Constants";
+import React, { useState } from "react";
+import { ServerManager } from "../../ServerManger";
+import { useSelector } from "react-redux";
+import { RootState } from "../../state/store";
 
-export interface IHackProps {
+export interface IServerProps {
     ns: NS;
+    sm: ServerManager;
 }
 
-export const HackDisplay = ({ ns }: IHackProps) => {
-    const [sharePower, setSharePower] = useState(0);
-    const [isSharing, setIsSharing] = useState("false");
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const sp = ns.getSharePower();
-            setSharePower(sp);
-            const iss = ns.peek(SHARE_PORT);
-            setIsSharing(iss);
-        }, 1000);
-
-        return () => {
-            clearInterval(interval);
-        };
-    }, []);
+export const ServerDisplay = ({ ns, sm }: IServerProps) => {
+    const maxRam = useSelector(
+        (state: RootState) => state.servermanager.CurrentRam
+    );
+    const serverCount = useSelector(
+        (state: RootState) => state.servermanager.Count
+    );
+    const maxServers = useSelector(
+        (state: RootState) => state.servermanager.Max
+    );
 
     return (
         <div
@@ -65,7 +61,7 @@ export const HackDisplay = ({ ns }: IHackProps) => {
                             color: "yellow",
                         }}
                     >
-                        Share Power
+                        Server Count
                     </p>
                 </div>
                 <div
@@ -93,7 +89,7 @@ export const HackDisplay = ({ ns }: IHackProps) => {
                             color: "yellow",
                         }}
                     >
-                        {sharePower}
+                        {serverCount}
                     </p>
                 </div>
             </div>
@@ -131,7 +127,7 @@ export const HackDisplay = ({ ns }: IHackProps) => {
                             color: "yellow",
                         }}
                     >
-                        Is Sharing
+                        Max Servers
                     </p>
                 </div>
                 <div
@@ -159,7 +155,73 @@ export const HackDisplay = ({ ns }: IHackProps) => {
                             color: "yellow",
                         }}
                     >
-                        {isSharing}
+                        {maxServers}
+                    </p>
+                </div>
+            </div>
+            <div
+                style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    height: "100%",
+                }}
+            >
+                <div
+                    style={{
+                        fontFamily:
+                            '"Lucida Console", "Lucida Sans Unicode", "Fira Mono", Consolas, "Courier New", Courier, monospace, "Times New Roman"',
+                        fontWeight: "400",
+                        fontSize: "0.875rem",
+                        lineHeight: "1.43",
+                        verticalAlign: "inherit",
+                        textAlign: "left",
+                        paddingLeft: "16px",
+                        color: "rgba(0, 0, 0, 0.87)",
+                    }}
+                >
+                    <p
+                        className="MuiTypography-root MuiTypography-body1"
+                        style={{
+                            margin: "0px",
+                            fontFamily:
+                                '"Lucida Console", "Lucida Sans Unicode", "Fira Mono", Consolas, "Courier New", Courier, monospace, "Times New Roman"',
+                            fontWeight: "400",
+                            fontSize: "1rem",
+                            lineHeight: "1.5",
+                            color: "yellow",
+                        }}
+                    >
+                        Current Ram
+                    </p>
+                </div>
+                <div
+                    style={{
+                        fontFamily:
+                            '"Lucida Console", "Lucida Sans Unicode", "Fira Mono", Consolas, "Courier New", Courier, monospace, "Times New Roman"',
+                        fontWeight: "400",
+                        fontSize: "0.875rem",
+                        lineHeight: "1.43",
+                        verticalAlign: "inherit",
+                        textAlign: "left",
+                        paddingLeft: "16px",
+                        color: "rgba(0, 0, 0, 0.87)",
+                    }}
+                >
+                    <p
+                        className="MuiTypography-root MuiTypography-body1"
+                        style={{
+                            margin: "0px",
+                            fontFamily:
+                                '"Lucida Console", "Lucida Sans Unicode", "Fira Mono", Consolas, "Courier New", Courier, monospace, "Times New Roman"',
+                            fontWeight: "400",
+                            fontSize: "1rem",
+                            lineHeight: "1.5",
+                            color: "yellow",
+                        }}
+                    >
+                        {maxRam}
                     </p>
                 </div>
             </div>

@@ -1,45 +1,45 @@
 import React, { useEffect, useState } from "react";
-import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
-import Dropdown from "react-bootstrap/Dropdown";
-import Container from "react-bootstrap/esm/Container";
-import { SHARE_PORT, TARGET_PORT } from "servers/home/Constants";
-import { ButtonGroup } from "react-bootstrap";
-import { ServerManager } from "servers/home/Utilities/ServerManagers/ServerManager";
-import { store } from "servers/home/state/store";
+import { useAppDispatch, useAppSelector } from "../../state/hooks";
+import { TARGET_PORT } from "../../Constants";
+import { ServerManager } from "../../ServerManger";
+import Dropdown from "react-bootstrap/esm/Dropdown";
+import {
+    SetBuying,
+    SetHackType,
+    SetHacking,
+    SetMaxRam,
+    SetTarget,
+} from "../../state/ServerManager/ServerManagerSlice";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Button from "react-bootstrap/Button";
+import { RootState } from "../../state/store";
 
-export interface IServerPanelProps {
+interface IServerPanelProps {
     ns: NS;
     sm: ServerManager;
     show: boolean;
-    onClose: (saved: boolean, info: IServerPanelInfo) => void;
-}
-
-export interface IServerPanelInfo {
-    IsBuying: boolean;
-    IsHacking: boolean;
-    Target: string;
-    MaxRam: number;
-    HackType: number;
+    onClose: () => void;
 }
 
 export const ServerPanel = ({ ns, sm, show, onClose }: IServerPanelProps) => {
-    const [isHacking, setIsHacking] = useState(
-        store.getState().servermanager.Hacking
-    );
-    const [isBuying, setIsBuying] = useState(
-        store.getState().servermanager.Buying
-    );
-    const [hackType, setHackType] = useState(
-        store.getState().servermanager.HackType
-    );
-
-    const [ramSize, setRamSize] = useState(
-        store.getState().servermanager.MaxRam
-    );
-    const [target, setTarget] = useState(store.getState().servermanager.Target);
     const [serverList, setServerList] = useState([]);
     const [ramSizes, setRamSizes] = useState([]);
+    const dispatch = useAppDispatch();
+    const serverInfo = useAppSelector(
+        (state: RootState) => state.servermanager
+    );
+
+    const [buying, setBuying] = useState(serverInfo.Buying);
+    const [hacking, setHacking] = useState(serverInfo.Hacking);
+    const [maxRam, setMaxRam] = useState(serverInfo.MaxRam);
+    const [hackType, setHackType] = useState(serverInfo.HackType);
+    const [target, setTarget] = useState(serverInfo.Target);
+
+    useEffect(() => {
+        const servers = sm.getPublicServers();
+        setServerList(servers);
+    }, []);
 
     useEffect(() => {
         const tempRamSizes = [];
@@ -53,90 +53,81 @@ export const ServerPanel = ({ ns, sm, show, onClose }: IServerPanelProps) => {
         setRamSizes(tempRamSizes);
     }, []);
 
-    useEffect(() => {
-        const newTarget = ns.peek(TARGET_PORT);
-        if (newTarget === "NULL PORT DATA") {
-            ns.writePort(TARGET_PORT, "n00dles");
-        } else {
-            setTarget(newTarget);
-        }
-        const servers = sm.GetPublicServers();
-        setServerList(servers);
-    }, []);
-
-    const handleClose = (saved: boolean) => {
-        onClose(saved, {
-            IsBuying: isBuying,
-            IsHacking: isHacking,
-            Target: target,
-            MaxRam: ramSize,
-            HackType: hackType,
-        });
+    const onBuyServers = () => {
+        setBuying(!buying);
     };
 
     const onHackTarget = () => {
-        setIsHacking(!isHacking);
+        setHacking(!hacking);
     };
 
     const onServerSizeChange = (eventKey: string) => {
-        setRamSize(Number(eventKey));
+        setMaxRam(Number(eventKey));
     };
 
     const onChangeTarget = (eventKey: string) => {
         setTarget(eventKey);
     };
 
-    const onBuyServers = () => {
-        setIsBuying(!isBuying);
+    const onChangeHackMethod = (value) => {
+        setHackType(value);
     };
 
-    const changeHack = (type: number) => {
-        setHackType(type);
+    const handleSave = () => {
+        dispatch(SetMaxRam(maxRam));
+        dispatch(SetTarget(target));
+        dispatch(SetHackType(hackType));
+        dispatch(SetHacking(hacking));
+        dispatch(SetBuying(buying));
+        onClose();
+    };
+
+    const handleClose = () => {
+        onClose();
     };
 
     return (
-        <Modal show={show} onHide={() => handleClose(false)}>
-            <Modal.Header closeButton>
-                <Modal.Title>Server Management Panel</Modal.Title>
-            </Modal.Header>
+        <div
+            className="modal show"
+            style={{ display: "block", position: "initial" }}
+        >
+            <Modal show={show} onHide={handleClose}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Server Controls</Modal.Title>
+                </Modal.Header>
 
-            <Modal.Body>
-                <Container
-                    fluid="md"
-                    style={{
-                        borderBottom: "5px solid",
-                        paddingTop: "10px",
-                        paddingBottom: "10px",
-                    }}
-                >
+                <Modal.Body>
                     <div className="d-grid gap-2">
                         <Button
-                            variant={isHacking ? "danger" : "success"}
+                            variant={hacking ? "danger" : "success"}
                             onClick={onHackTarget}
                         >
                             Hacking
                         </Button>
-                        <ButtonGroup aria-label="hackType">
+                        <ButtonGroup>
                             <Button
-                                variant="primary"
-                                onClick={() => changeHack(0)}
+                                value={0}
+                                id="Basic"
                                 active={hackType === 0}
+                                onClick={() => onChangeHackMethod(0)}
                             >
                                 Basic
                             </Button>
                             <Button
-                                variant="primary"
-                                onClick={() => changeHack(1)}
+                                value={1}
+                                id="Share"
                                 active={hackType === 1}
-                            >
-                                Batch
-                            </Button>
-                            <Button
-                                variant="primary"
-                                onClick={() => changeHack(2)}
-                                active={hackType === 2}
+                                onClick={() => onChangeHackMethod(1)}
                             >
                                 Share
+                            </Button>
+                            <Button
+                                value={2}
+                                id="Batch"
+                                active={hackType === 2}
+                                onClick={() => onChangeHackMethod(2)}
+                            >
+                                Batch
                             </Button>
                         </ButtonGroup>
                         <Dropdown onSelect={onChangeTarget} className="d-grid">
@@ -154,7 +145,7 @@ export const ServerPanel = ({ ns, sm, show, onClose }: IServerPanelProps) => {
                             </Dropdown.Menu>
                         </Dropdown>
                         <Button
-                            variant={isBuying ? "danger" : "success"}
+                            variant={buying ? "danger" : "success"}
                             onClick={onBuyServers}
                         >
                             Servers
@@ -164,7 +155,7 @@ export const ServerPanel = ({ ns, sm, show, onClose }: IServerPanelProps) => {
                             className="d-grid"
                         >
                             <Dropdown.Toggle variant="primary" id="serverSize">
-                                Server Size {ramSize}GB
+                                Server Size {maxRam}GB
                             </Dropdown.Toggle>
                             <Dropdown.Menu>
                                 {ramSizes.map((size) => {
@@ -177,13 +168,16 @@ export const ServerPanel = ({ ns, sm, show, onClose }: IServerPanelProps) => {
                             </Dropdown.Menu>
                         </Dropdown>
                     </div>
-                </Container>
-            </Modal.Body>
-
-            <Modal.Footer>
-                <Button onClick={() => handleClose(true)}>Save</Button>
-                <Button onClick={() => handleClose(false)}>Cancel</Button>
-            </Modal.Footer>
-        </Modal>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleClose}>
+                        Close
+                    </Button>
+                    <Button variant="primary" onClick={handleSave}>
+                        Save Changes
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        </div>
     );
 };
