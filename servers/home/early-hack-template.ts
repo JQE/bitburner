@@ -46,7 +46,7 @@ export async function main(ns: NS) {
                 ns.printf("Running hack");
                 await ns.hack(target);
             }
-            shareOnly = ns.peek(8);
+            shareOnly = ns.peek(2);
             const newTarget = ns.peek(1);
             if (newTarget !== target) {
                 target = newTarget;

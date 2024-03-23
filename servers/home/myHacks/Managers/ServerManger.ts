@@ -9,14 +9,14 @@ import {
     SetBuying,
     SetHacking,
     SetShareValue,
-} from "./state/ServerManager/ServerManagerSlice";
-import { store } from "./state/store";
-import { RamNet } from "./batching/RamNet";
-import { Metrics } from "./batching/Metrics";
-import { ServerUtils } from "./batching/ServerUtils";
-import { WORKERS } from "./batching/Constants";
-import { ContinuousBatcher } from "./batching/ContinuousBatcher";
-import { SHARE_PORT, TARGET_PORT } from "./Constants";
+} from "../state/ServerManager/ServerManagerSlice";
+import { store } from "../state/store";
+import { RamNet } from "../batching/RamNet";
+import { Metrics } from "../batching/Metrics";
+import { ServerUtils } from "../batching/ServerUtils";
+import { WORKERS } from "../batching/Constants";
+import { ContinuousBatcher } from "../batching/ContinuousBatcher";
+import { SHARE_PORT, TARGET_PORT } from "../Constants";
 
 export interface Servers {
     name: string;
@@ -84,10 +84,15 @@ export class ServerManager {
                     store.dispatch(SetCurrentRam(maxRam));
                 }
             });
-
+            let atRam = 0;
+            this.privateServers.forEach((server) => {
+                const maxRam = this.ns.getServerMaxRam(server);
+                if (maxRam >= store.getState().servermanager.CurrentRam) {
+                    atRam++;
+                }
+            });
             if (
-                store.getState().servermanager.Count >=
-                    store.getState().servermanager.Max &&
+                atRam >= store.getState().servermanager.Max &&
                 store.getState().servermanager.CurrentRam <
                     store.getState().servermanager.MaxRam
             ) {
@@ -101,8 +106,8 @@ export class ServerManager {
                         atRam++;
                     }
                 });
-                store.dispatch(SetAtRam(atRam));
             }
+            store.dispatch(SetAtRam(atRam));
         }
         this.ns.printf(
             "Current Ram Size %d",
@@ -205,7 +210,7 @@ export class ServerManager {
         this.ns.print(`Ram: ${ramSize} Max: ${maxRamSize}`);
         const max = store.getState().servermanager.Count;
         let atRam = store.getState().servermanager.AtRam;
-        this.ns.print(`Count: ${max} AtRam: ${atRam}`);
+        let cost = 0;
         if (ramSize <= maxRamSize && atRam < max) {
             this.privateServers.forEach((server) => {
                 const maxRam = this.ns.getServerMaxRam(server);
@@ -214,6 +219,7 @@ export class ServerManager {
                         server,
                         ramSize
                     );
+                    if (upgradeCost > cost) cost = upgradeCost;
                     if (this.ns.getServerMoneyAvailable("home") > upgradeCost) {
                         this.ns.upgradePurchasedServer(server, ramSize);
                         atRam++;
@@ -224,6 +230,12 @@ export class ServerManager {
             });
             store.dispatch(SetAtRam(atRam));
         }
+        this.ns.print(
+            `Count: ${max} AtRam: ${atRam} Cost: ${this.ns.formatNumber(
+                cost,
+                2
+            )}`
+        );
     };
 
     private getCurrentRamStep = () => {
@@ -326,7 +338,10 @@ export class ServerManager {
         });
         if (includeHome) {
             this.ns.ps("home").forEach((service) => {
-                if (service.filename !== "myHacks/main.js") {
+                if (
+                    service.filename !== "myHacks/main.js" &&
+                    service.filename !== "gang.js"
+                ) {
                     this.ns.kill(service.filename, "home", ...service.args);
                 }
             });
@@ -341,7 +356,6 @@ export class ServerManager {
     };
 
     processServerActivity = async () => {
-        this.ns.clearLog();
         const serverManagerState = store.getState().servermanager;
         if (serverManagerState.Buying) {
             if (serverManagerState.Count < serverManagerState.Max) {
@@ -351,7 +365,7 @@ export class ServerManager {
                 this.purchaseServers();
             } else {
                 this.ns.print(
-                    `Upgrading Servers ${serverManagerState.Count} / ${serverManagerState.Max}`
+                    `Upgrading Servers ${serverManagerState.AtRam} / ${serverManagerState.Max}`
                 );
                 this.upgradeServers();
             }
@@ -372,6 +386,10 @@ export class ServerManager {
             this.ns.print(
                 `Hacking Server ${store.getState().servermanager.Target}`
             );
+        }
+        if (store.getState().servermanager.HackType === 1) {
+            this.ns.clearPort(SHARE_PORT);
+            this.ns.writePort(SHARE_PORT, "true");
         }
         const sharePower = this.ns.getSharePower();
         store.dispatch(SetShareValue(sharePower));

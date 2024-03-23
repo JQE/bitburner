@@ -2,8 +2,8 @@ import {
     setCount,
     setMaxNodes,
     setPurchased,
-} from "./state/HacknetManager/HacknetManagerSlice";
-import { store } from "./state/store";
+} from "../state/HacknetManager/HacknetManagerSlice";
+import { store } from "../state/store";
 
 export class HacknetManager {
     private ns: NS;

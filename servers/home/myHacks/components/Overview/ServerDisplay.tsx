@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ServerManager } from "../../ServerManger";
+import { ServerManager } from "../../Managers/ServerManger";
 import { useSelector } from "react-redux";
 import { RootState } from "../../state/store";
 
@@ -13,7 +13,7 @@ export const ServerDisplay = ({ ns, sm }: IServerProps) => {
         (state: RootState) => state.servermanager.CurrentRam
     );
     const serverCount = useSelector(
-        (state: RootState) => state.servermanager.Count
+        (state: RootState) => state.servermanager.AtRam
     );
     const maxServers = useSelector(
         (state: RootState) => state.servermanager.Max
