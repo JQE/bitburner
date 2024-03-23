@@ -16,6 +16,8 @@ export class ContinuousBatcher {
     dataPort: NetscriptPort;
     batchCount: number = 0;
     desyncs: number = 0;
+    batcherRunTime: number = 3600000;
+    runTime: number = 0;
 
     running = new Map();
 
@@ -77,11 +79,32 @@ export class ContinuousBatcher {
         this.metrics.delay = 0;
     };
 
+    formatTime(miliseconds) {
+        let minutes = 0;
+        let seconds = 0;
+        if (miliseconds > 60000) {
+            minutes = Math.floor(miliseconds / 60000);
+            miliseconds = miliseconds - minutes * 60000;
+        }
+        if (miliseconds > 1000) {
+            seconds = Math.floor(miliseconds / 1000);
+        }
+        let outputstring = "";
+        if (minutes > 0) {
+            outputstring += `${minutes} minutes and `;
+        }
+        outputstring += `${seconds} seconds`;
+        return outputstring;
+    }
+
     log() {
         const ns = this.ns;
         const metrics = this.metrics;
         const ramNet = this.ramNet;
         ns.clearLog();
+        ns.print(
+            `Running batch for ${this.formatTime(this.runTime - Date.now())}`
+        );
         ns.print(
             `Hacking ~\$${ns.formatNumber(
                 ((metrics.maxMoney * metrics.greed * metrics.chance) /
@@ -115,6 +138,7 @@ export class ContinuousBatcher {
     }
 
     run = async () => {
+        this.runTime = Date.now() + this.batcherRunTime;
         // First we do some initial setup, this is essentially firing off a shotgun blast to get us started.
         this.ns.print("Setting shotgun to start");
         const dataPort = this.dataPort;
@@ -122,9 +146,10 @@ export class ContinuousBatcher {
         await this.deploy();
         await this.ns.sleep(0); // This is probably pointless. I forget why I put it here.
         this.log();
-        while (true) {
+        while (Date.now() < this.runTime) {
             // Wait for the nextWrite, as usual.
-            await dataPort.nextWrite();
+            await this.ns.sleep(1000);
+            this.log();
 
             // Sometimes there's a delay and more than one job writes to the port at once.
             // We make sure to handle it all before we move on.
@@ -173,6 +198,19 @@ export class ContinuousBatcher {
                 }
             }
         }
+        while (this.running.size > 0) {
+            //await dataPort.nextWrite();
+            await this.ns.sleep(1000);
+            this.log();
+            while (!dataPort.empty()) {
+                // Workers now report unique identifiers (type + batchnumber) used to find them on the map.
+                const data = dataPort.read();
+
+                this.ramNet.finish(this.running.get(data));
+                this.running.delete(data);
+                this.log();
+            }
+        }
     };
 }
 
@@ -180,17 +218,7 @@ export async function main(ns) {
     ns.disableLog("ALL");
     ns.tail();
 
-    /*
-	This commented out code is for a debugging tool that centralizes logs from the worker scripts into one place.
-	It's main advantage is the ability to write txt logs to file, which can be perused later to track down errors.
-	You can uncomment it if you'd like to see a live stream of workers finishing without flooding the terminal.
-
-	If you do, make sure to search the file for -LOGGING and uncomment all relevant lines.
-	*/
-    // if (ns.isRunning("/part4/logHelper.js", "home")) ns.kill("/part4/logHelper.js", "home");
-    // const logPort = ns.exec("/part4/logHelper.js", "home");
-    // ns.atExit(() => ns.closeTail(logPort));
-
+    ns.atExit(() => ns.closeTail());
     // Setup is mostly the same.
     const dataPort = ns.getPortHandle(ns.pid);
     dataPort.clear();
@@ -199,6 +227,7 @@ export async function main(ns) {
     const utils = new ServerUtils(ns);
     while (true) {
         const servers = utils.getServers((server) => {
+            if (server === "home") return false;
             if (!ns.args[0])
                 target = utils.checkTarget(
                     server,
@@ -222,17 +251,5 @@ export async function main(ns) {
         // Create and run our batcher.
         const batcher = new ContinuousBatcher(ns, metrics, ramNet, utils);
         await batcher.run();
-
-        /*
-		You might be wondering why I put this in a while loop and then just return here. The simple answer is that
-		it's because this is meant to be run in a loop, but I didn't implement the logic for it. This version of the
-		batcher is completely static once created. It sticks to a single greed value, and doesn't update if more
-		RAM becomes available.
-
-		In a future version, you'd want some logic to allow the batcher to choose new targets, update its available RAM,
-		and create new batchers during runtime. For now, that's outside the scope of this guide, but consider this loop
-		as a sign of what could be.
-		*/
-        return;
     }
 }

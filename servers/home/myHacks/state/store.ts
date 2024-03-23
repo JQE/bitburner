@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import serverManagerReducer from "./ServerManager/ServerManagerSlice";
 import hacknetManagerReducer from "./HacknetManager/HacknetManagerSlice";
+import GangManagerReducer from "./GangManager/GangManagerSlice";
 
 export const store = configureStore({
     reducer: {
         servermanager: serverManagerReducer,
         hacknetmanager: hacknetManagerReducer,
+        gangmanager: GangManagerReducer,
     },
 });
 

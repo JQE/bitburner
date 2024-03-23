@@ -1,28 +1,30 @@
 import React, { ChangeEvent, useState } from "react";
-import { ServerManager } from "../../ServerManger";
+import { ServerManager } from "../../Managers/ServerManger";
 import { useAppSelector } from "../../state/hooks";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Container from "react-bootstrap/esm/Container";
-import { HacknetManager } from "../../HacknetManager";
+import { HacknetManager } from "../../Managers/HacknetManager";
 import { RootState } from "../../state/store";
 
 interface IControlButtonsProps {
     ns: NS;
     sm: ServerManager;
-    hnm: HacknetManager;
+    //hnm: HacknetManager;
     onShowServer: () => void;
+    onShowGang: () => void;
     onQuit: () => void;
 }
 
 export const ControlButtons = ({
     ns,
     sm,
-    hnm,
+    //hnm,
     onShowServer,
+    onShowGang,
     onQuit,
 }: IControlButtonsProps) => {
-    let hacknetsize = useAppSelector(
+    /*let hacknetsize = useAppSelector(
         (state: RootState) => state.hacknetmanager.Count
     );
 
@@ -41,7 +43,7 @@ export const ControlButtons = ({
     const onHacknetCountChange = (event: ChangeEvent<HTMLInputElement>) => {
         setHacknetCount(Number(event.currentTarget.value));
         hnm.setNumServers(Number(event.currentTarget.value));
-    };
+    }; */
 
     const handleQuit = () => {
         onQuit();
@@ -59,6 +61,9 @@ export const ControlButtons = ({
             <div className="d-grid gap-2">
                 <Button variant="primary" onClick={onShowServer}>
                     Server Manager
+                </Button>
+                <Button variant="primary" onClick={onShowGang}>
+                    Gang Manager
                 </Button>
                 {/*<Button
                     variant={isBuyHacknet ? "danger" : "success"}

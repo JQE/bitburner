@@ -1,19 +1,21 @@
 import { Dashboard } from "./components/Dashboard";
 import React from "react";
 import ReactDOM from "react-dom";
-import { ServerManager } from "./ServerManger";
+import { ServerManager } from "./Managers/ServerManger";
 import { Provider } from "react-redux";
 import { store } from "./state/store";
 import Style from "./bootstrap.css";
-import { HacknetManager } from "./HacknetManager";
+import { GangManager } from "./Managers/GangManager";
 
 export async function main(ns: NS) {
     ns.disableLog("ALL");
 
     ns.disableLog("asleep");
+    ns.tail();
     let running = true;
     const sm = new ServerManager(ns);
-    const hnm = new HacknetManager(ns);
+    //const hnm = new HacknetManager(ns);
+    const gm = new GangManager(ns);
 
     /*const body = document.body;
     body.style.overflow = "hidden";
@@ -40,6 +42,8 @@ export async function main(ns: NS) {
         running = false;
         await sm.cleanup();
         menu.remove();
+        const db = document.getElementById("dashboard");
+        if (db) db.remove();
         /*dashboard.remove();
         delete document.body.style.overflow;
         delete document.body.style.display;
@@ -57,7 +61,11 @@ export async function main(ns: NS) {
     ReactDOM.render(
         <Provider store={store}>
             <Style></Style>
-            <Dashboard ns={ns} sm={sm} hnm={hnm} onQuit={onQuit}></Dashboard>
+            <Dashboard
+                ns={ns}
+                sm={sm}
+                /*hnm={hnm}*/ onQuit={onQuit}
+            ></Dashboard>
         </Provider>,
         menu
     );
@@ -66,8 +74,12 @@ export async function main(ns: NS) {
     });
 
     while (running) {
-        await ns.asleep(1000); // script must be running in bitburner for ns methods to function inside our component
+        if (!ns.gang.inGang()) await ns.asleep(1000);
+        // script must be running in bitburner for ns methods to function inside our component
+        else await ns.gang.nextUpdate();
+        ns.clearLog();
         await sm.processServerActivity();
-        hnm.processHacknetActivity();
+        await gm.processGangs();
+        //hnm.processHacknetActivity();
     }
 }

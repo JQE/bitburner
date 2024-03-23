@@ -24,11 +24,12 @@ export async function main(ns: NS) {
         };
 
         recursiveScan("home");
+        const portCount = ns.fileExists("BruteSSH.exe") ? 1 : 0;
 
         servers.forEach((server) => {
             const numPorts = ns.getServerNumPortsRequired(server);
-            if (numPorts <= 1) {
-                if (numPorts === 1) {
+            if (numPorts <= portCount) {
+                if (numPorts === 1 && portCount >= 1) {
                     ns.brutessh(server);
                 }
                 const maxRam = ns.getServerMaxRam(server);

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import { useAppDispatch, useAppSelector } from "../../state/hooks";
-import { TARGET_PORT } from "../../Constants";
-import { ServerManager } from "../../ServerManger";
+import { SHARE_PORT, TARGET_PORT } from "../../Constants";
+import { ServerManager } from "../../Managers/ServerManger";
 import Dropdown from "react-bootstrap/esm/Dropdown";
 import {
     SetBuying,
@@ -79,6 +79,10 @@ export const ServerPanel = ({ ns, sm, show, onClose }: IServerPanelProps) => {
         dispatch(SetHackType(hackType));
         dispatch(SetHacking(hacking));
         dispatch(SetBuying(buying));
+        if (hackType === 1) {
+            ns.clearPort(SHARE_PORT);
+            ns.writePort(SHARE_PORT, "true");
+        }
         onClose();
     };
 
@@ -91,7 +95,7 @@ export const ServerPanel = ({ ns, sm, show, onClose }: IServerPanelProps) => {
             className="modal show"
             style={{ display: "block", position: "initial" }}
         >
-            <Modal show={show} onHide={handleClose}>
+            <Modal show={show} onHide={handleClose} size="lg" centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Server Controls</Modal.Title>
                 </Modal.Header>
