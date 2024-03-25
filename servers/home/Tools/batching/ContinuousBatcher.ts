@@ -214,29 +214,54 @@ export class ContinuousBatcher {
     };
 }
 
-export async function main(ns) {
+const getToolCount = (ns: NS) => {
+    let numTools = 0;
+    if (ns.fileExists("BruteSSH.exe")) {
+        numTools++;
+    }
+    if (ns.fileExists("FTPCrack.exe")) {
+        numTools++;
+    }
+    if (ns.fileExists("relaySMTP.exe")) {
+        numTools++;
+    }
+    if (ns.fileExists("HTTPWorm.exe")) {
+        numTools++;
+    }
+    if (ns.fileExists("SQLInject.exe")) {
+        numTools++;
+    }
+    return numTools;
+};
+
+export async function main(ns: NS) {
     ns.disableLog("ALL");
     ns.tail();
 
-    ns.atExit(() => ns.closeTail());
+    ns.atExit(() => ns.closeTail(ns.pid));
     // Setup is mostly the same.
     const dataPort = ns.getPortHandle(ns.pid);
     dataPort.clear();
-    let target = ns.args[0] ? ns.args[0] : "n00dles";
+    let target: string = ns.args[0] ? (ns.args[0] as string) : "n00dles";
     ns.print(`Target: ${target}`);
     const utils = new ServerUtils(ns);
+    const toolCount = getToolCount(ns);
     while (true) {
-        const servers = utils.getServers((server) => {
-            if (server === "home") return false;
-            if (!ns.args[0])
-                target = utils.checkTarget(
-                    server,
-                    target,
-                    ns.fileExists("Formulas.exe", "home")
-                );
-            utils.copyScripts(server, WORKERS, true);
-            return ns.hasRootAccess(server);
-        });
+        const servers = utils.getServers(
+            (server) => {
+                if (server === "home") return false;
+                if (!ns.args[0])
+                    target = utils.checkTarget(
+                        server,
+                        target,
+                        ns.fileExists("Formulas.exe", "home")
+                    );
+                utils.copyScripts(server, WORKERS, true);
+                return ns.hasRootAccess(server);
+            },
+            "home",
+            toolCount
+        );
         const ramNet = new RamNet(ns, servers);
         const metrics = new Metrics(ns, utils, target);
         // metrics.log = logPort; // Uncomment for -LOGGING.

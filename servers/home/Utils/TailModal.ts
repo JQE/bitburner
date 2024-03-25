@@ -29,7 +29,10 @@ export class TailModal {
         return tailTitleEl?.parentElement!.parentElement;
     };
 
-    getCustomModalContainer = (): HTMLDivElement | undefined => {
+    getCustomModalContainer = (
+        title: string,
+        height: number
+    ): HTMLDivElement | undefined => {
         const id = this.getCommandLine().replace(/[^\w\.]/g, "_");
         let containerEl = this.doc.getElementById(id) as HTMLDivElement | null;
         if (!containerEl) {
@@ -42,27 +45,46 @@ export class TailModal {
             containerEl.style.fontFamily =
                 '"Lucida Console", "Lucida Sans Unicode", "Fira Mono", Consolas, "Courier New", Courier, monospace, "Times New Roman"';
             containerEl.style.fontWeight = "400";
-            containerEl.style.position = "absolute";
-            containerEl.style.overflow = "auto";
             containerEl.style.left = "0";
             containerEl.style.right = "0";
             containerEl.style.top = "34px";
             containerEl.style.bottom = "0";
             containerEl.style.background = "black";
             containerEl.style.color = "rgb(0, 204, 0)";
-            containerEl.style.overflowY = "scroll";
-            containerEl.style.height = "250px";
+            containerEl.style.top = "40px";
+            containerEl.style.overflow = "hidden";
+            containerEl.style.height = "fit-content";
+            containerEl.style.position = "fixed";
             const contentEl = modalEl.firstElementChild
                 .nextElementSibling as HTMLElement;
-            contentEl.style.paddingTop = "288px";
-            contentEl.style.height = "calc(100% - 33px)";
-            modalEl.insertBefore(containerEl, modalEl.firstChild);
+            modalEl.firstElementChild
+                .querySelector("span")
+                ?.firstElementChild.remove();
+            modalEl.firstElementChild
+                .querySelector("span")
+                ?.lastElementChild.remove();
+            modalEl.firstElementChild.querySelector("h6").title = title;
+            modalEl.firstElementChild.querySelector("h6").innerText = title;
+            let found = false;
+            modalEl.querySelectorAll("span").forEach((span) => {
+                if (span.style.position === "absolute" && found === false) {
+                    span.remove();
+                    found = true;
+                }
+            });
+            modalEl.style.height = `${height}px`;
+            const firstChild = contentEl.firstChild;
+            contentEl.insertBefore(containerEl, firstChild);
         }
         return containerEl;
     };
 
-    renderCustomModal = (element: React.ReactElement) => {
-        const container = this.getCustomModalContainer();
+    renderCustomModal = (
+        element: React.ReactElement,
+        title: string,
+        height: number
+    ) => {
+        const container = this.getCustomModalContainer(title, height);
         if (!container) {
             this.ns.tprint("Failed to get container");
             return;

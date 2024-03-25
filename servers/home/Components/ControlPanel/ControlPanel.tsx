@@ -1,35 +1,52 @@
 import React from "react";
-import Button from "react-bootstrap/Button";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
 
-export const ControlPanel = () => {
+interface IControlPanelProps {
+    onGangs: () => void;
+    onQuit: () => void;
+    onBatcher: () => void;
+    onServer: () => void;
+    onHack: () => void;
+}
+
+export const ControlPanel = ({
+    onGangs,
+    onQuit,
+    onBatcher,
+    onServer,
+    onHack,
+}: IControlPanelProps) => {
     return (
-        <>
-            <h3>Control Panel</h3>
-            <Container fluid>
-                <Row>
-                    <Col>
-                        <div className="d-grid gap-2">
-                            <Button size="lg">Gangs</Button>
-                        </div>
-                    </Col>
-                    <Col>
-                        <div className="d-grid gap-2">
-                            <Button size="lg">Batcher</Button>
-                        </div>
-                    </Col>
-                </Row>
-                <Row style={{ marginTop: "10px" }}>
-                    <Col>
-                        <div className="d-grid gap-2">
-                            <Button size="lg">Server Manager</Button>
-                        </div>
-                    </Col>
-                    <Col></Col>
-                </Row>
-            </Container>
-        </>
+        <div className="grid grid-cols-2 gap-2">
+            <button
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
+                onClick={onGangs}
+            >
+                Gangs
+            </button>
+            <button
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-fulll"
+                onClick={onBatcher}
+            >
+                Batcher
+            </button>
+            <button
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
+                onClick={onServer}
+            >
+                Server Manager
+            </button>
+            <button
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-fulll"
+                onClick={onHack}
+            >
+                Hacking Manager
+            </button>
+            <button
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-fulll"
+                onClick={onQuit}
+            >
+                Quit
+            </button>
+        </div>
     );
 };
