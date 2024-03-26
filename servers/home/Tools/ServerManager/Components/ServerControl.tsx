@@ -30,7 +30,6 @@ export const ServerControl = ({
     };
 
     const handleSize = (event: ChangeEvent<HTMLSelectElement>) => {
-        console.log(event.currentTarget.value);
         setSize(onSize(Number(event.currentTarget.value)));
     };
 

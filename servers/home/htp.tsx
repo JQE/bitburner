@@ -20,9 +20,6 @@ export async function main(ns: NS) {
     let server = false;
     let serverPid = 0;
 
-    let batcher = false;
-    let batcherPid = 0;
-
     let gangs = false;
     let gangPid = 0;
 
@@ -103,7 +100,6 @@ export async function main(ns: NS) {
             return ns.hasRootAccess(server);
         }, "home");
         servers.forEach((server) => {
-            ns.print(`Kill scripts on ${server}`);
             if (server !== "home") {
                 ns.killall(server);
             } else {
@@ -115,23 +111,6 @@ export async function main(ns: NS) {
                 });
             }
         });
-    };
-
-    const onBatcher = () => {
-        batcher = !batcher;
-        if (batcher === true) {
-            batcherPid = ns.exec("Tools/batching/ContinuousBatcher.js", "home");
-            if (batcherPid === 0) {
-                ns.print("Failed to run batcher");
-                batcher = false;
-            }
-        } else {
-            if (batcherPid !== 0) {
-                ns.kill("Tools/batching/ContinuousBatcher.js", "home");
-                killAll();
-                batcherPid = 0;
-            }
-        }
     };
 
     const onQuit = () => {
@@ -151,12 +130,6 @@ export async function main(ns: NS) {
             killAll();
             hackPid = 0;
         }
-        if (batcherPid !== 0) {
-            ns.closeTail(batcherPid);
-            ns.kill("Tools/batching/ContinuousBatcher.js", "home");
-            killAll();
-            batcherPid = 0;
-        }
         running = false;
     };
 
@@ -166,12 +139,11 @@ export async function main(ns: NS) {
             <ControlPanel
                 onGangs={onGangs}
                 onQuit={onQuit}
-                onBatcher={onBatcher}
                 onServer={onServer}
                 onHack={onHack}
             ></ControlPanel>
         </>,
-        "Control Panel",
+        "Main Control Panel",
         300
     );
 
@@ -192,13 +164,6 @@ export async function main(ns: NS) {
         if (serverPid !== 0) {
             ns.kill("Tools/ServerManager/ServerManager.js", "home");
             serverPid = 0;
-        }
-
-        if (batcherPid !== 0) {
-            ns.closeTail(batcherPid);
-            ns.kill("Tools/batching/ContinuousBatcher.js", "home");
-            killAll();
-            batcherPid = 0;
         }
     });
 
