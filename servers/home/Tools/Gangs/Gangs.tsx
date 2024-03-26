@@ -317,6 +317,7 @@ export async function main(ns: NS) {
             );
             duration = (await ns.gang.nextUpdate()) / 1000;
         } else {
+            ns.print(`Current heart: ${ns.heart.break()}`);
             await ns.sleep(1000);
         }
     }

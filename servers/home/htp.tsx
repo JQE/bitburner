@@ -168,6 +168,8 @@ export async function main(ns: NS) {
     });
 
     while (running) {
+        ns.clearLog();
+        ns.print(`Heart: ${ns.heart.break()}`);
         await ns.asleep(1000);
     }
     ns.closeTail();
