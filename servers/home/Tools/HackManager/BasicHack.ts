@@ -204,6 +204,14 @@ export class BasicHack {
         this.ns.print(
             `Server Count: ${this.servers.length}    Target: ${this.target}`
         );
+        const security = this.ns.getServerSecurityLevel(this.target);
+        const money = this.ns.getServerMoneyAvailable(this.target);
+        this.ns.print(
+            `Target Security: ${this.ns.formatNumber(
+                security,
+                2
+            )} Money: \$${this.ns.formatNumber(money, 2)}`
+        );
         this.ns.print(`Current Tool Count: ${this.toolCount}`);
     };
 }

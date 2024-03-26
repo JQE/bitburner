@@ -100,6 +100,9 @@ export async function main(ns: NS) {
         let cost;
         if (atRam >= count) {
             currentSize *= 2;
+            if (currentSize > size) {
+                currentSize = size;
+            }
             atRam = countAtRam();
         }
         const server = servers[atRam];
@@ -109,8 +112,13 @@ export async function main(ns: NS) {
         }
         cost = ns.getPurchasedServerUpgradeCost(server, currentSize);
         if (ns.getServerMoneyAvailable("home") > cost) {
-            ns.upgradePurchasedServer(server, currentSize);
-            atRam++;
+            if (ns.upgradePurchasedServer(server, currentSize)) {
+                atRam++;
+            } else {
+                ns.print(
+                    `Failed to upgrade server ${server} to ${currentSize}`
+                );
+            }
         }
         return cost;
     };
@@ -120,21 +128,33 @@ export async function main(ns: NS) {
 
     while (running) {
         let cost;
+        ns.clearLog();
         if (buying) {
-            if (count < max) {
-                cost = purchaseServers();
+            if (atRam === count && currentSize === size) {
+                ns.print(`Buying: At Capacity`);
             } else {
-                if (atRam === count) {
-                    currentSize *= 2;
-                    atRam = countAtRam();
-                }
-                if (currentSize <= size) {
-                    cost = upgradeServers();
+                if (count < max) {
+                    ns.print(`Buying: New servers`);
+                    cost = purchaseServers();
+                } else {
+                    ns.print(`Buying: Upgrade Servers`);
+                    if (atRam === count) {
+                        currentSize *= 2;
+                        if (currentSize > size) {
+                            currentSize = size;
+                            ns.print(`Buying: At Capacity`);
+                        } else {
+                            atRam = countAtRam();
+                        }
+                    }
+                    if (currentSize <= size) {
+                        cost = upgradeServers();
+                    }
                 }
             }
+        } else {
+            ns.print(`Buying: Disabled`);
         }
-        ns.clearLog();
-        ns.print(`Buying Servers: ${buying}`);
         ns.print(
             `Size: ${currentSize}gb /${size}gb ${atRam}/${max} ${
                 cost !== undefined ? `Cost: ${ns.formatNumber(cost, 2)}` : ""

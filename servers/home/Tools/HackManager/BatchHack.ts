@@ -1,6 +1,5 @@
 import { NetscriptPort } from "NetscriptDefinitions";
 import { COSTS, SCRIPTS, WORKERS } from "./BatchTool/Constants";
-import { initialize } from "esbuild";
 
 export class BatchHack {
     private ns: NS;
@@ -15,6 +14,10 @@ export class BatchHack {
     private serverIndex: number = 0;
     private runTime: number = 1200000;
     private checkTime: number = 0;
+    private prepTime: number = 0;
+    private totalPrepTime: number = 0;
+    private prepThreadsLeft: number = 0;
+    private prepServers: number = 0;
     private hackingServers = 0;
     private lastRestart = "";
 
@@ -66,10 +69,7 @@ export class BatchHack {
         let previousScore;
         let currentScore;
 
-        if (
-            serverSim.requiredHackingSkill <=
-            player.skills.hacking / (forms ? 1 : 2)
-        ) {
+        if (serverSim.requiredHackingSkill <= player.skills.hacking / 8) {
             if (forms) {
                 serverSim.hackDifficulty = serverSim.minDifficulty;
                 pSim.hackDifficulty = pSim.minDifficulty;
@@ -166,7 +166,8 @@ export class BatchHack {
                 return this.ns.hasRootAccess(server);
             },
             "home",
-            this.toolCount
+            this.toolCount,
+            ["home"]
         );
     };
 
@@ -188,6 +189,7 @@ export class BatchHack {
     private prepServer = () => {
         if (this.isPrepped() || this.isPrepping) return;
         this.isPrepping = true;
+
         const money = this.ns.getServerMoneyAvailable(this.target);
         const sec = this.ns.getServerSecurityLevel(this.target);
         const maxMoney = this.ns.getServerMaxMoney(this.target);
@@ -225,8 +227,9 @@ export class BatchHack {
         }
 
         let totalThreads = gThreads + wThreads2 + wThreads1;
+        const startThreads = totalThreads;
         let serverIndex = 0;
-        while (totalThreads > 0) {
+        while (totalThreads > 0 && serverIndex < this.servers.length) {
             const server = this.servers[serverIndex];
             const ramAvail =
                 this.ns.getServerMaxRam(server) -
@@ -239,6 +242,8 @@ export class BatchHack {
                 const w1Threads = Math.min(maxThreads, wThreads1);
                 maxThreads -= w1Threads;
                 wThreads1 -= w1Threads;
+                const report =
+                    (wThreads2 <= 0 && wThreads1 <= 0) || maxThreads <= 0;
                 const w1Pid = this.ns.exec(
                     SCRIPTS.weaken1,
                     server,
@@ -249,15 +254,19 @@ export class BatchHack {
                     this.target,
                     0,
                     this.ns.pid,
-                    wThreads2 <= 0 && wThreads1 <= 0
+                    report
                 );
                 if (!w1Pid)
                     throw new Error(`Failed to start weaken threads ${server}`);
+                if (report) {
+                    this.prepServers++;
+                }
             }
             if (maxThreads > 0 && gThreads > 0) {
                 const Threadsg = Math.min(maxThreads, gThreads);
                 maxThreads -= Threadsg;
                 gThreads -= Threadsg;
+                const report = maxThreads <= 0;
                 const gPid = this.ns.exec(
                     SCRIPTS.grow,
                     server,
@@ -268,14 +277,18 @@ export class BatchHack {
                     this.target,
                     wTime + 5 - gTime,
                     this.ns.pid,
-                    false
+                    report
                 );
                 if (!gPid) throw new Error("Failed to start grow threads");
+                if (report) {
+                    this.prepServers++;
+                }
             }
             if (maxThreads > 0 && wThreads2 > 0) {
                 const w2Threads = Math.min(maxThreads, wThreads2);
                 maxThreads -= w2Threads;
                 wThreads2 -= w2Threads;
+                const report = wThreads2 <= 0 || maxThreads <= 0;
                 const w2Pid = this.ns.exec(
                     SCRIPTS.weaken2,
                     server,
@@ -286,18 +299,30 @@ export class BatchHack {
                     this.target,
                     10,
                     this.ns.pid,
-                    wThreads2 <= 0
+                    report
                 );
                 if (!w2Pid)
                     throw new Error(
                         `Failed to start weaken2 threads ${server} ${w2Threads}`
                     );
+                if (report) {
+                    this.prepServers++;
+                }
             }
         }
+        this.prepThreadsLeft = totalThreads;
+        let basePrepTime;
         if (wThreads2 > 0) {
-            this.checkTime = wTime + 10 + Date.now();
+            basePrepTime = wTime + 10;
+            this.prepTime = wTime + 10 + Date.now();
         } else {
-            this.checkTime = wTime + Date.now();
+            basePrepTime = wTime;
+            this.prepTime = wTime + Date.now();
+        }
+        if (this.prepThreadsLeft > 0) {
+            const runThreads = startThreads - totalThreads;
+            const overallBatches = startThreads / runThreads;
+            this.totalPrepTime = basePrepTime * overallBatches + Date.now();
         }
     };
 
@@ -393,11 +418,9 @@ export class BatchHack {
     };
 
     private initializeBatch = () => {
-        this.hackingServers = 0;
+        this.clearHack();
         this.isBatching = true;
         this.startingBatch = true;
-        this.dataPort.clear();
-        this.serverIndex = 0;
         this.startBatch();
     };
 
@@ -424,22 +447,22 @@ export class BatchHack {
         this.isPrepping = false;
         this.hackingServers = 0;
         this.checkTime = 0;
+        this.prepTime = 0;
+        this.totalPrepTime = 0;
+        this.prepServers = 0;
         this.serverIndex = 0;
         this.dataPort.clear();
     };
 
     processHack = async () => {
-        if (this.checkTime < Date.now()) {
+        if (this.checkTime < Date.now() && !this.isPrepping) {
             this.checkTime = Date.now() + this.runTime;
             const oldTools = this.toolCount;
             this.toolCount = this.getToolCount();
             if (this.toolCount > oldTools) {
                 this.killall();
+                this.clearHack();
                 this.hackServers();
-                this.hackingServers = 0;
-                this.isBatching = false;
-                this.isPrepping = false;
-                this.dataPort.clear();
             } else {
                 let newTarget = this.target;
                 this.servers.forEach((server) => {
@@ -452,19 +475,13 @@ export class BatchHack {
                 if (newTarget !== this.target) {
                     this.target = newTarget;
                     this.killall();
-                    this.hackingServers = 0;
-                    this.isBatching = false;
-                    this.isPrepping = false;
-                    this.dataPort.clear();
+                    this.clearHack();
                 }
             }
 
             if (!this.isPrepped()) {
-                this.hackingServers = 0;
-                this.isPrepping = false;
                 this.killall();
-                this.dataPort.clear();
-                this.isBatching = false;
+                this.clearHack();
                 this.prepServer();
                 this.ns.print(`Starting prep of server ${this.target}`);
             } else if (this.isBatching === false) {
@@ -489,10 +506,14 @@ export class BatchHack {
         } else if (this.isPrepping) {
             while (!this.dataPort.empty()) {
                 const info = this.dataPort.read();
-                if (info.startsWith("weaken")) {
-                    this.dataPort.clear();
-                    this.isPrepping = false;
-                    this.checkTime = 0;
+                if (info.startsWith("weaken") || info.startsWith("grow")) {
+                    this.prepServers--;
+                    if (this.prepServers <= 0) {
+                        this.clearHack();
+                        if (!this.isPrepped()) {
+                            this.prepServer();
+                        }
+                    }
                 }
             }
         }
@@ -501,14 +522,28 @@ export class BatchHack {
                 `Last server to complete a batch ${this.lastRestart}`
             );
         }
-        this.ns.print(
-            `${
-                this.isPrepping ? "Prepping for" : "System update in"
-            } ${this.formatTime(this.checkTime - Date.now())}`
-        );
-        this.ns.print(
-            `Prepping server: ${this.isPrepping ? "In progress" : "Complete"}`
-        );
+        if (this.isPrepping) {
+            this.ns.print(
+                `Prepping for ${this.formatTime(this.prepTime - Date.now())} ${
+                    this.prepThreadsLeft > 0
+                        ? `${this.prepThreadsLeft} threads left`
+                        : ""
+                }`
+            );
+            if (this.prepThreadsLeft > 0) {
+                this.ns.print(
+                    `Total Prep Time: ${this.formatTime(
+                        this.totalPrepTime - Date.now()
+                    )}`
+                );
+            }
+        } else {
+            this.ns.print(
+                `System update in ${this.formatTime(
+                    this.checkTime - Date.now()
+                )}`
+            );
+        }
 
         this.ns.print(
             `Batching Progress: ${
@@ -519,6 +554,14 @@ export class BatchHack {
         );
         this.ns.print(
             `Server Count: ${this.hackingServers}    Target: ${this.target}`
+        );
+        const security = this.ns.getServerSecurityLevel(this.target);
+        const money = this.ns.getServerMoneyAvailable(this.target);
+        this.ns.print(
+            `Target Security: ${this.ns.formatNumber(
+                security,
+                2
+            )} Money: \$${this.ns.formatNumber(money, 2)}`
         );
         this.ns.print(`Current Tool Count: ${this.toolCount}`);
     };
