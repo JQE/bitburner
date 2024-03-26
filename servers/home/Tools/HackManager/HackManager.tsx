@@ -2,6 +2,8 @@ import React from "react";
 import { TailModal } from "servers/home/Utils/TailModal";
 import { BasicHack } from "./BasicHack";
 import { HackControl } from "./Components/HackControl";
+import { ShareHack } from "./ShareHack";
+import { BatchHack } from "./BatchHack";
 
 export enum HackType {
     Basic = 1,
@@ -27,7 +29,9 @@ export async function main(ns: NS) {
     let hacking = false;
     let running = true;
     let target = "n00dles";
-    let basicHack: BasicHack = new BasicHack(ns, target);
+    const basicHack: BasicHack = new BasicHack(ns, target);
+    const shareHack: ShareHack = new ShareHack(ns, target);
+    const batchHack: BatchHack = new BatchHack(ns, target);
 
     const onHackType = (type: HackType): HackType => {
         hack = type;
@@ -38,6 +42,7 @@ export async function main(ns: NS) {
         hacking = !hacking;
         if (hacking === false) {
             killAll();
+            batchHack.clearHack();
         }
         return hacking;
     };
@@ -50,7 +55,7 @@ export async function main(ns: NS) {
             defaultType={hack}
             onHackType={onHackType}
         ></HackControl>,
-        "Server Controls",
+        "Hack Control Panel",
         300
     );
     ns.atExit(() => {
@@ -78,7 +83,6 @@ export async function main(ns: NS) {
             return ns.hasRootAccess(server);
         }, "home");
         servers.forEach((server) => {
-            ns.print(`Kill scripts on ${server}`);
             if (server !== "home") {
                 ns.killall(server);
             } else {
@@ -110,9 +114,9 @@ export async function main(ns: NS) {
             if (hack === HackType.Basic) {
                 basicHack.processHack();
             } else if (hack === HackType.Share) {
-                basicHack.processHack();
+                shareHack.processHack();
             } else {
-                alert("Adding batching logic");
+                await batchHack.processHack();
             }
         }
         await ns.asleep(1000);

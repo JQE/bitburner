@@ -75,7 +75,7 @@ export async function main(ns: NS) {
             onSize={onSize}
             defaultSize={size}
         ></ServerControl>,
-        "Server Controls",
+        "Server Control Panel",
         300
     );
 
