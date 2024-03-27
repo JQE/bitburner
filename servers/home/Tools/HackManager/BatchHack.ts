@@ -455,8 +455,7 @@ export class BatchHack {
     };
 
     processHack = async () => {
-        if (this.checkTime < Date.now() && !this.isPrepping) {
-            this.checkTime = Date.now() + this.runTime;
+        if (!this.isPrepping && !this.isBatching && !this.startingBatch) {
             const oldTools = this.toolCount;
             this.toolCount = this.getToolCount();
             if (this.toolCount > oldTools) {
@@ -483,10 +482,7 @@ export class BatchHack {
                 this.killall();
                 this.clearHack();
                 this.prepServer();
-                this.ns.print(`Starting prep of server ${this.target}`);
-            } else if (this.isBatching === false) {
-                this.isPrepping = false;
-                this.ns.print(`Starting new batch`);
+            } else {
                 this.initializeBatch();
             }
         }
@@ -495,33 +491,27 @@ export class BatchHack {
         } else if (this.isBatching) {
             while (!this.dataPort.empty()) {
                 const info = this.dataPort.read() as string;
-                const [task, server] = info.split(":");
                 if (info.startsWith("weaken")) {
                     this.hackingServers--;
-                    if (this.hackingServers < 0) this.hackingServers = 0;
-                    this.runBatch(server);
-                    this.lastRestart = server;
+                    if (this.hackingServers <= 0) {
+                        this.hackingServers = 0;
+                        this.clearHack();
+                    }
                 }
             }
         } else if (this.isPrepping) {
             while (!this.dataPort.empty()) {
                 const info = this.dataPort.read();
+                console.log(info);
                 if (info.startsWith("weaken") || info.startsWith("grow")) {
-                    this.prepServers--;
-                    if (this.prepServers <= 0) {
-                        this.clearHack();
-                        if (!this.isPrepped()) {
-                            this.prepServer();
-                        }
+                    this.clearHack();
+                    if (!this.isPrepped()) {
+                        this.prepServer();
                     }
                 }
             }
         }
-        if (this.lastRestart !== "") {
-            this.ns.print(
-                `Last server to complete a batch ${this.lastRestart}`
-            );
-        }
+
         if (this.isPrepping) {
             this.ns.print(
                 `Prepping for ${this.formatTime(this.prepTime - Date.now())} ${
@@ -537,14 +527,7 @@ export class BatchHack {
                     )}`
                 );
             }
-        } else {
-            this.ns.print(
-                `System update in ${this.formatTime(
-                    this.checkTime - Date.now()
-                )}`
-            );
         }
-
         this.ns.print(
             `Batching Progress: ${
                 this.isBatching
