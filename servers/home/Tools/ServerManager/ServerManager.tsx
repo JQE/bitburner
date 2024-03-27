@@ -130,7 +130,7 @@ export async function main(ns: NS) {
         let cost;
         ns.clearLog();
         if (buying) {
-            if (atRam === count && currentSize === size) {
+            if (count === max && atRam === count && currentSize === size) {
                 ns.print(`Buying: At Capacity`);
             } else {
                 if (count < max) {
