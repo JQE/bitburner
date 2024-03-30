@@ -12,19 +12,27 @@ export class BatchHack {
     private isBatching: boolean = false;
     private startingBatch: boolean = false;
     private serverIndex: number = 0;
-    private runTime: number = 1200000;
-    private checkTime: number = 0;
     private prepTime: number = 0;
+    private checkTime: number = 0;
+    private runTime: number = 900000;
     private totalPrepTime: number = 0;
     private prepThreadsLeft: number = 0;
     private prepServers: number = 0;
     private hackingServers = 0;
-    private lastRestart = "";
+    private greed = 0.05;
+    private best = 0;
+    private greedStep = 99;
+    private isOptimizing = false;
+    private isOptimized = false;
+    private error = "";
+    private maxMoney;
+    private hackChance;
 
     constructor(ns: NS, target: string = "joesguns") {
         this.ns = ns;
         this.target = target;
         this.dataPort = this.ns.getPortHandle(this.ns.pid);
+        this.maxMoney = this.ns.getServerMaxMoney(this.target);
     }
 
     private getServers = (
@@ -69,7 +77,10 @@ export class BatchHack {
         let previousScore;
         let currentScore;
 
-        if (serverSim.requiredHackingSkill <= player.skills.hacking / 8) {
+        if (
+            serverSim.requiredHackingSkill <=
+            player.skills.hacking / (forms ? 1 : 2)
+        ) {
             if (forms) {
                 serverSim.hackDifficulty = serverSim.minDifficulty;
                 pSim.hackDifficulty = pSim.minDifficulty;
@@ -156,11 +167,7 @@ export class BatchHack {
         this.servers = this.getServers(
             (server) => {
                 if (server === "home") return false;
-                this.target = this.checkTarget(
-                    server,
-                    this.target,
-                    this.ns.fileExists("Formulas.exe", "home")
-                );
+                this.target = this.checkTarget(server, this.target, true);
                 this.copyScripts(server, WORKERS, true);
                 this.nukeTarget(server);
                 return this.ns.hasRootAccess(server);
@@ -173,7 +180,15 @@ export class BatchHack {
 
     private killall = () => {
         this.servers.forEach((server) => {
-            this.ns.kill(this.hackScript, server);
+            if (server !== "home") {
+                this.ns.killall(server);
+            } else {
+                this.ns.ps(server).forEach((proc) => {
+                    if (WORKERS.includes(proc.filename)) {
+                        this.ns.scriptKill(proc.filename, server);
+                    }
+                });
+            }
         });
     };
 
@@ -192,7 +207,7 @@ export class BatchHack {
 
         const money = this.ns.getServerMoneyAvailable(this.target);
         const sec = this.ns.getServerSecurityLevel(this.target);
-        const maxMoney = this.ns.getServerMaxMoney(this.target);
+        this.maxMoney = this.ns.getServerMaxMoney(this.target);
         const minSec = this.ns.getServerMinSecurityLevel(this.target);
 
         let wThreads1 = 0;
@@ -201,21 +216,15 @@ export class BatchHack {
 
         let wTime;
 
-        if (this.ns.fileExists("Formulas.exe", "home")) {
-            wTime = this.ns.formulas.hacking.weakenTime(
-                this.ns.getServer(this.target),
-                this.ns.getPlayer()
-            );
-        } else {
-            wTime = this.ns.getWeakenTime(this.target);
-        }
+        wTime = this.ns.formulas.hacking.weakenTime(
+            this.ns.getServer(this.target),
+            this.ns.getPlayer()
+        );
         const gTime = wTime * 0.8;
-        const dataPort = this.ns.getPortHandle(this.ns.pid);
-        dataPort.clear();
 
-        if (money < maxMoney) {
+        if (money < this.maxMoney) {
             gThreads = Math.ceil(
-                this.ns.growthAnalyze(this.target, maxMoney / money)
+                this.ns.growthAnalyze(this.target, this.maxMoney / money)
             );
             wThreads2 = Math.ceil(
                 this.ns.growthAnalyzeSecurity(gThreads) / 0.05
@@ -326,17 +335,22 @@ export class BatchHack {
         }
     };
 
-    private runBatch = (server: string) => {
+    private getMaxRam = () => {
+        let maxRam = 0;
+        this.servers.forEach((server) => {
+            const ram = this.ns.getServerMaxRam(server);
+            if (ram > maxRam) maxRam = ram;
+        });
+        return maxRam;
+    };
+
+    private testThreads = (server: string = "pserver-0") => {
         const maxMoney = this.ns.getServerMaxMoney(this.target);
+        const amount = maxMoney * this.greedStep;
 
-        const wTime = this.ns.getWeakenTime(this.target);
-        const gTime = wTime * 0.8;
-        const hTime = wTime / 4;
-        const amount = maxMoney * 0.05;
-
-        const hPercent = this.ns.hackAnalyze(server);
+        const hPercent = this.ns.hackAnalyze(this.target);
         const hThreads = Math.max(
-            Math.floor(this.ns.hackAnalyzeThreads(server, amount)),
+            Math.floor(this.ns.hackAnalyzeThreads(this.target, amount)),
             1
         );
         const tGreed = hPercent * hThreads;
@@ -344,6 +358,99 @@ export class BatchHack {
             Math.ceil(
                 this.ns.growthAnalyze(
                     server,
+                    maxMoney / (maxMoney - maxMoney * tGreed)
+                ) * 1.01
+            ),
+            1
+        );
+        const wThreads1 = Math.max(Math.ceil((hThreads * 0.002) / 0.05), 1);
+        const wThreads2 = Math.max(Math.ceil((gThreads * 0.004) / 0.05), 1);
+
+        const availRam = this.ns.getServerMaxRam(server);
+        const totalCost =
+            hThreads * COSTS.hack +
+            gThreads * COSTS.grow +
+            wThreads1 * COSTS.weaken1 +
+            wThreads2 * COSTS.weaken2;
+        let batchCount = Math.floor(availRam / totalCost);
+        return batchCount;
+    };
+
+    private startOptimizing = () => {
+        this.isOptimizing = true;
+        this.optimize();
+    };
+
+    private optimize = () => {
+        // Setup is mostly the same.
+        const maxThreads = this.getMaxRam() / 1.85;
+        const maxMoney = this.ns.getServerMaxMoney(this.target);
+        const hPercent = this.ns.hackAnalyze(this.target);
+        const wTime = this.ns.getWeakenTime(this.target); // We'll need this for one of our calculations.
+
+        const stepValue = 0.01; // Step value is now 10x higher. If you think that's overkill, it's not.
+
+        // This algorithm starts out pretty much the same. We begin by weeding out the obviously way too huge greed levels.
+        const amount = maxMoney * this.greedStep;
+        const hThreads = Math.max(
+            Math.floor(this.ns.hackAnalyzeThreads(this.target, amount)),
+            1
+        );
+        const tGreed = hPercent * hThreads;
+        // 1% overestimation here too. Always make sure your calculations match.
+        const gThreads = Math.ceil(
+            this.ns.growthAnalyze(
+                this.target,
+                maxMoney / (maxMoney - maxMoney * tGreed)
+            ) * 1.01
+        );
+
+        if (Math.max(hThreads, gThreads) <= maxThreads) {
+            const batchCount = this.testThreads("pserver-0");
+            const income =
+                (tGreed * maxMoney * batchCount) / (5 * 4 * batchCount + wTime);
+            if (income > this.best) {
+                this.best = income;
+                this.greed = this.greedStep;
+            }
+        }
+        this.greedStep -= stepValue;
+        this.ns.print(
+            `Optimizing Greed: ${this.ns.formatNumber(
+                this.greedStep,
+                2
+            )} / \$${this.ns.formatNumber(this.best, 2)}`
+        );
+        if (this.greedStep <= 0) {
+            if (this.best <= 0) {
+                this.clearHack();
+                this.error = "Cannot find a valid batch";
+            } else {
+                this.isOptimizing = false;
+                this.isOptimized = true;
+                this.error = "";
+            }
+        }
+    };
+
+    private runBatch = (server: string) => {
+        const maxMoney = this.ns.getServerMaxMoney(this.target);
+
+        const wTime = this.ns.getWeakenTime(this.target);
+        const gTime = wTime * 0.8;
+        const hTime = wTime / 4;
+        const amount = maxMoney * this.greed;
+
+        const hPercent = this.ns.hackAnalyze(this.target);
+        const hThreads = Math.max(
+            Math.floor(this.ns.hackAnalyzeThreads(this.target, amount)),
+            1
+        );
+        const tGreed = hPercent * hThreads;
+        const gThreads = Math.max(
+            Math.ceil(
+                this.ns.growthAnalyze(
+                    this.target,
                     maxMoney / (maxMoney - maxMoney * tGreed)
                 ) * 1.01
             ),
@@ -365,6 +472,9 @@ export class BatchHack {
         }
         while (batchCount > 0) {
             batchCount--;
+            console.log(batchCount);
+            const report = batchCount === 0;
+            console.log(report);
             this.ns.exec(
                 SCRIPTS.hack,
                 server,
@@ -402,7 +512,7 @@ export class BatchHack {
                 this.target,
                 10,
                 this.ns.pid,
-                batchCount <= 0
+                report
             );
         }
     };
@@ -444,108 +554,165 @@ export class BatchHack {
 
     clearHack = () => {
         this.isBatching = false;
+        this.startingBatch = false;
         this.isPrepping = false;
         this.hackingServers = 0;
-        this.checkTime = 0;
         this.prepTime = 0;
         this.totalPrepTime = 0;
         this.prepServers = 0;
         this.serverIndex = 0;
+        this.isOptimized = false;
+        this.isOptimizing = false;
+        this.error = "";
         this.dataPort.clear();
     };
 
     processHack = async () => {
-        if (!this.isPrepping && !this.isBatching && !this.startingBatch) {
-            const oldTools = this.toolCount;
-            this.toolCount = this.getToolCount();
-            if (this.toolCount > oldTools) {
-                this.killall();
-                this.clearHack();
-                this.hackServers();
-            } else {
-                let newTarget = this.target;
-                this.servers.forEach((server) => {
-                    newTarget = this.checkTarget(
-                        server,
-                        this.target,
-                        this.ns.fileExists("Formulas.exe", "home")
-                    );
-                });
-                if (newTarget !== this.target) {
-                    this.target = newTarget;
+        this.hackChance = this.ns.hackAnalyzeChance(this.target);
+        this.maxMoney = this.ns.getServerMaxMoney(this.target);
+        if (this.error !== undefined && this.error !== "") {
+            this.ns.print(this.error);
+        } else {
+            if (
+                (!this.isPrepping &&
+                    !this.isBatching &&
+                    !this.startingBatch &&
+                    !this.isOptimizing) ||
+                this.checkTime < Date.now()
+            ) {
+                this.checkTime = Date.now() + this.runTime;
+                const oldTools = this.toolCount;
+                this.toolCount = this.getToolCount();
+                if (this.toolCount > oldTools) {
                     this.killall();
                     this.clearHack();
-                }
-            }
-
-            if (!this.isPrepped()) {
-                this.killall();
-                this.clearHack();
-                this.prepServer();
-            } else {
-                this.initializeBatch();
-            }
-        }
-        if (this.startingBatch) {
-            this.startBatch();
-        } else if (this.isBatching) {
-            while (!this.dataPort.empty()) {
-                const info = this.dataPort.read() as string;
-                if (info.startsWith("weaken")) {
-                    this.hackingServers--;
-                    if (this.hackingServers <= 0) {
-                        this.hackingServers = 0;
+                    this.hackServers();
+                } else {
+                    let newTarget = this.target;
+                    this.servers.forEach((server) => {
+                        newTarget = this.checkTarget(server, this.target, true);
+                    });
+                    if (newTarget !== this.target) {
+                        this.target = newTarget;
+                        this.maxMoney = this.ns.getServerMaxMoney(this.target);
+                        this.killall();
                         this.clearHack();
                     }
                 }
-            }
-        } else if (this.isPrepping) {
-            while (!this.dataPort.empty()) {
-                const info = this.dataPort.read();
-                console.log(info);
-                if (info.startsWith("weaken") || info.startsWith("grow")) {
+
+                if (!this.isPrepped()) {
+                    this.killall();
                     this.clearHack();
-                    if (!this.isPrepped()) {
-                        this.prepServer();
+                    this.prepServer();
+                } else if (!this.isOptimized) {
+                    this.startOptimizing();
+                } else if (!this.isBatching) {
+                    this.checkTime = Date.now() + this.runTime;
+                    this.initializeBatch();
+                }
+            } else {
+                if (this.isPrepping) {
+                    while (!this.dataPort.empty()) {
+                        const info = this.dataPort.read();
+                        if (
+                            info.startsWith("weaken") ||
+                            info.startsWith("grow")
+                        ) {
+                            this.clearHack();
+                            if (!this.isPrepped()) {
+                                this.prepServer();
+                            }
+                        }
+                    }
+                } else if (this.isOptimizing) {
+                    this.optimize();
+                } else if (this.startingBatch) {
+                    this.startBatch();
+                } else if (this.isBatching) {
+                    while (!this.dataPort.empty()) {
+                        const info = this.dataPort.read() as string;
+                        const [type, server] = info.split(":");
+                        if (type === "weaken") {
+                            this.hackingServers--;
+                            this.runBatch(server);
+                        }
+                    }
+                }
+
+                if (this.isPrepping) {
+                    this.ns.print(
+                        `Prepping for ${this.formatTime(
+                            this.prepTime - Date.now()
+                        )} ${
+                            this.prepThreadsLeft > 0
+                                ? `${this.prepThreadsLeft} threads left`
+                                : ""
+                        }`
+                    );
+                    if (this.prepThreadsLeft > 0) {
+                        this.ns.print(
+                            `Total Prep Time: ${this.formatTime(
+                                this.totalPrepTime - Date.now()
+                            )}`
+                        );
                     }
                 }
             }
-        }
-
-        if (this.isPrepping) {
             this.ns.print(
-                `Prepping for ${this.formatTime(this.prepTime - Date.now())} ${
-                    this.prepThreadsLeft > 0
-                        ? `${this.prepThreadsLeft} threads left`
-                        : ""
+                `Progresss: ${
+                    this.isPrepping
+                        ? "Prepping"
+                        : `${
+                              this.isOptimizing
+                                  ? "Optimizing"
+                                  : `${
+                                        this.isBatching ? "Batching" : "Unknown"
+                                    }`
+                          }`
                 }`
             );
-            if (this.prepThreadsLeft > 0) {
+            if (this.isBatching) {
+                const moneyPServ =
+                    ((this.maxMoney * this.greed * this.hackChance) / (4 * 5)) *
+                    1000;
                 this.ns.print(
-                    `Total Prep Time: ${this.formatTime(
-                        this.totalPrepTime - Date.now()
-                    )}`
+                    `Stealing: ~\$${this.ns.formatNumber(moneyPServ, 2)}/s`
+                );
+                this.ns.print(
+                    `Chance: ${this.ns.formatNumber(
+                        this.hackChance,
+                        2
+                    )}    Greed: ${this.ns.formatNumber(this.greed, 3)}`
+                );
+                this.ns.print(
+                    `Reset: ${this.formatTime(this.checkTime - Date.now())}`
                 );
             }
+            this.ns.print(
+                `Server Count: ${this.hackingServers}    Target: ${this.target}`
+            );
+            const security = this.ns.getServerSecurityLevel(this.target);
+            const minSec = this.ns.getServerMinSecurityLevel(this.target);
+            const money = this.ns.getServerMoneyAvailable(this.target);
+            const maxMoney = this.ns.getServerMaxMoney(this.target);
+            this.ns.print(
+                `Security: ${this.ns.formatNumber(
+                    security,
+                    2
+                )} / ${this.ns.formatNumber(
+                    minSec,
+                    2
+                )}   Money: \$${this.ns.formatNumber(
+                    money,
+                    2
+                )} / \$${this.ns.formatNumber(maxMoney, 2)}`
+            );
+            this.ns.print(`Current Tool Count: ${this.toolCount}`);
         }
-        this.ns.print(
-            `Batching Progress: ${
-                this.isBatching
-                    ? "In progress"
-                    : `${this.isPrepped() ? "Complete" : "Waiting"}`
-            }`
-        );
-        this.ns.print(
-            `Server Count: ${this.hackingServers}    Target: ${this.target}`
-        );
-        const security = this.ns.getServerSecurityLevel(this.target);
-        const money = this.ns.getServerMoneyAvailable(this.target);
-        this.ns.print(
-            `Target Security: ${this.ns.formatNumber(
-                security,
-                2
-            )} Money: \$${this.ns.formatNumber(money, 2)}`
-        );
-        this.ns.print(`Current Tool Count: ${this.toolCount}`);
+        if (this.isOptimizing || this.startingBatch) {
+            await this.ns.sleep(5);
+        } else {
+            await this.ns.sleep(1000);
+        }
     };
 }

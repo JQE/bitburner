@@ -104,85 +104,40 @@ export async function main(ns: NS) {
     };
 
     const processJob = (info: GangMemberInfo, jobFocus: ActivityFocus) => {
-        if (ns.fileExists("Formulas.exe")) {
-            const gang = ns.gang.getGangInformation();
+        const gang = ns.gang.getGangInformation();
 
-            if (jobFocus === ActivityFocus.Respect) {
-                const taskStats = ns.gang.getTaskStats("Terrorism");
-                const gains = {
-                    Wanted: ns.formulas.gang.wantedLevelGain(
-                        gang,
-                        info,
-                        taskStats
-                    ),
-                    Respect: ns.formulas.gang.respectGain(
-                        gang,
-                        info,
-                        taskStats
-                    ),
-                    Money: ns.formulas.gang.moneyGain(gang, info, taskStats),
-                };
-                if (
-                    gains.Wanted < gains.Respect ||
-                    gains.Wanted < gains.Money
-                ) {
-                    return "Terrorism";
-                }
-            } else if (jobFocus === ActivityFocus.Money) {
-                const taskStats = ns.gang.getTaskStats("Human Trafficking");
-                const gains = {
-                    Wanted: ns.formulas.gang.wantedLevelGain(
-                        gang,
-                        info,
-                        taskStats
-                    ),
-                    Respect: ns.formulas.gang.respectGain(
-                        gang,
-                        info,
-                        taskStats
-                    ),
-                    Money: ns.formulas.gang.moneyGain(gang, info, taskStats),
-                };
-                if (
-                    gains.Wanted < gains.Respect ||
-                    gains.Wanted < gains.Money
-                ) {
-                    return "Human Trafficking";
-                }
-            } else {
-                const taskStats = ns.gang.getTaskStats("Territory Warfare");
-                const gains = {
-                    Wanted: ns.formulas.gang.wantedLevelGain(
-                        gang,
-                        info,
-                        taskStats
-                    ),
-                    Respect: ns.formulas.gang.respectGain(
-                        gang,
-                        info,
-                        taskStats
-                    ),
-                    Money: ns.formulas.gang.moneyGain(gang, info, taskStats),
-                };
-                if (
-                    gains.Wanted < gains.Respect ||
-                    gains.Wanted < gains.Money
-                ) {
-                    return "Territory Warfare";
-                }
+        if (jobFocus === ActivityFocus.Respect) {
+            const taskStats = ns.gang.getTaskStats("Terrorism");
+            const gains = {
+                Wanted: ns.formulas.gang.wantedLevelGain(gang, info, taskStats),
+                Respect: ns.formulas.gang.respectGain(gang, info, taskStats),
+                Money: ns.formulas.gang.moneyGain(gang, info, taskStats),
+            };
+            if (gains.Wanted < gains.Respect || gains.Wanted < gains.Money) {
+                return "Terrorism";
             }
-            return baseJob;
+        } else if (jobFocus === ActivityFocus.Money) {
+            const taskStats = ns.gang.getTaskStats("Human Trafficking");
+            const gains = {
+                Wanted: ns.formulas.gang.wantedLevelGain(gang, info, taskStats),
+                Respect: ns.formulas.gang.respectGain(gang, info, taskStats),
+                Money: ns.formulas.gang.moneyGain(gang, info, taskStats),
+            };
+            if (gains.Wanted < gains.Respect || gains.Wanted < gains.Money) {
+                return "Human Trafficking";
+            }
         } else {
-            if (info.str > 700) {
-                if (jobFocus === ActivityFocus.Warfare) {
-                    return "Territory Warfare";
-                }
-                return jobFocus === ActivityFocus.Respect
-                    ? "Terrorism"
-                    : "Human Trafficking";
+            const taskStats = ns.gang.getTaskStats("Territory Warfare");
+            const gains = {
+                Wanted: ns.formulas.gang.wantedLevelGain(gang, info, taskStats),
+                Respect: ns.formulas.gang.respectGain(gang, info, taskStats),
+                Money: ns.formulas.gang.moneyGain(gang, info, taskStats),
+            };
+            if (gains.Wanted < gains.Respect || gains.Wanted < gains.Money) {
+                return "Territory Warfare";
             }
-            return baseJob;
         }
+        return baseJob;
     };
 
     const getJob = (info: GangMemberInfo) => {
@@ -234,7 +189,7 @@ export async function main(ns: NS) {
         }
         const gangInfo = ns.gang.getGangInformation();
 
-        if (gangInfo.respect > baseRep) {
+        if (gangInfo.respect > baseRep || gangInfo.respect === 1) {
             if (ns.gang.getAscensionResult(member.name)?.str > 1.5) {
                 baseRep = gangInfo.respect;
                 ns.gang.ascendMember(member.name);

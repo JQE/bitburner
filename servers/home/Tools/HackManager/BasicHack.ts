@@ -6,7 +6,7 @@ export class BasicHack {
     private target: string;
     private toolCount: number = -1;
 
-    constructor(ns: NS, target: string = "n00dles") {
+    constructor(ns: NS, target: string = "joesguns") {
         this.ns = ns;
         this.scriptMem = this.ns.getScriptRam(this.hackScript);
         this.target = target;
@@ -15,7 +15,6 @@ export class BasicHack {
     private getServers = (
         lambdaCondition = (hostname: string) => true,
         hostname = "home",
-        toolCount = 0,
         servers: string[] = [],
         visited: string[] = []
     ) => {
@@ -25,7 +24,7 @@ export class BasicHack {
         const connectedNodes = this.ns.scan(hostname);
         if (hostname !== "home") connectedNodes.shift();
         for (const node of connectedNodes)
-            this.getServers(lambdaCondition, node, toolCount, servers, visited);
+            this.getServers(lambdaCondition, node, servers, visited);
         return servers;
     };
 
@@ -144,37 +143,34 @@ export class BasicHack {
         this.servers = this.getServers(
             (server) => {
                 if (server === "home") return false;
-                this.target = this.checkTarget(
-                    server,
-                    this.target,
-                    this.ns.fileExists("Formulas.exe", "home")
-                );
+                //this.target = this.checkTarget(server, this.target, true);
                 this.copyScripts(server, [this.hackScript], true);
                 this.nukeTarget(server);
                 return this.ns.hasRootAccess(server);
             },
             "home",
-            this.toolCount
+            ["home"]
         );
     };
 
     private runJobs = () => {
         this.servers.forEach((server) => {
             const numPorts = this.ns.getServerNumPortsRequired(server);
-            if (numPorts <= this.toolCount) {
-                if (numPorts >= 1) {
+            const isPrivate = server.startsWith("pserv");
+            if (numPorts <= this.toolCount || isPrivate) {
+                if (numPorts >= 1 && !isPrivate) {
                     this.ns.brutessh(server);
                 }
-                if (numPorts >= 2) {
+                if (numPorts >= 2 && !isPrivate) {
                     this.ns.ftpcrack(server);
                 }
-                if (numPorts >= 3) {
+                if (numPorts >= 3 && !isPrivate) {
                     this.ns.relaysmtp(server);
                 }
-                if (numPorts >= 4) {
+                if (numPorts >= 4 && !isPrivate) {
                     this.ns.httpworm(server);
                 }
-                if (numPorts >= 5) {
+                if (numPorts >= 5 && !isPrivate) {
                     this.ns.sqlinject(server);
                 }
                 const maxRam = this.ns.getServerMaxRam(server);
@@ -183,7 +179,7 @@ export class BasicHack {
                 if (threads > 0) {
                     this.ns.nuke(server);
                     this.ns.scp(this.hackScript, server);
-                    this.ns.exec(this.hackScript, server, threads);
+                    this.ns.exec(this.hackScript, server, threads, this.target);
                 }
             }
         });
@@ -193,7 +189,7 @@ export class BasicHack {
             this.ns.kill(this.hackScript, server);
         });
     };
-    processHack = () => {
+    processHack = async () => {
         const oldTools = this.toolCount;
         this.toolCount = this.getToolCount();
         if (this.toolCount > oldTools) {
@@ -206,12 +202,21 @@ export class BasicHack {
         );
         const security = this.ns.getServerSecurityLevel(this.target);
         const money = this.ns.getServerMoneyAvailable(this.target);
+        const minSec = this.ns.getServerMinSecurityLevel(this.target);
+        const maxMoney = this.ns.getServerMaxMoney(this.target);
         this.ns.print(
-            `Target Security: ${this.ns.formatNumber(
+            `Security: ${this.ns.formatNumber(
                 security,
+                1
+            )} / ${this.ns.formatNumber(
+                minSec,
+                1
+            )} Money: \$${this.ns.formatNumber(
+                money,
                 2
-            )} Money: \$${this.ns.formatNumber(money, 2)}`
+            )} / \$${this.ns.formatNumber(maxMoney, 2)}`
         );
         this.ns.print(`Current Tool Count: ${this.toolCount}`);
+        await this.ns.sleep(1000);
     };
 }

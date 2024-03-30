@@ -29,7 +29,8 @@ export async function main(ns: NS) {
     let hacking = false;
     let running = true;
     let target = "n00dles";
-    const basicHack: BasicHack = new BasicHack(ns, target);
+    let exiting = false;
+    const basicHack: BasicHack = new BasicHack(ns, "joesguns");
     const shareHack: ShareHack = new ShareHack(ns, target);
     const batchHack: BatchHack = new BatchHack(ns, target);
 
@@ -41,7 +42,8 @@ export async function main(ns: NS) {
     const onHack = (): boolean => {
         hacking = !hacking;
         if (hacking === false) {
-            killAll();
+            //killAll();
+            exiting = true;
             batchHack.clearHack();
         }
         return hacking;
@@ -112,13 +114,18 @@ export async function main(ns: NS) {
         ns.print(`Hacking Enabled: ${hacking}    Type: ${hackTypeToString()}`);
         if (hacking) {
             if (hack === HackType.Basic) {
-                basicHack.processHack();
+                await basicHack.processHack();
             } else if (hack === HackType.Share) {
-                shareHack.processHack();
+                await shareHack.processHack();
             } else {
                 await batchHack.processHack();
             }
+        } else {
+            if (exiting) {
+                killAll();
+                exiting = false;
+            }
+            await ns.asleep(1000);
         }
-        await ns.asleep(1000);
     }
 }
