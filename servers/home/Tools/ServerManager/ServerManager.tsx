@@ -17,6 +17,7 @@ export async function main(ns: NS) {
     let atRam = 0;
     let maxRam = ns.getPurchasedServerMaxRam();
     let running = true;
+    let lastMessage = "";
 
     const countAtRam = () => {
         let tempAtRam = 0;
@@ -88,9 +89,11 @@ export async function main(ns: NS) {
         if (cost < ns.getServerMoneyAvailable("home")) {
             let hostname = ns.purchaseServer(`pserver-${count}`, 8);
             if (hostname !== "") {
-                ns.printf("Purchasing server %s", hostname);
+                //ns.printf("Purchasing server %s", hostname);
+                lastMessage = `Purchasing server ${hostname}`;
                 count++;
                 atRam++;
+                servers.push(hostname);
             }
         }
         return cost;
@@ -114,10 +117,9 @@ export async function main(ns: NS) {
         if (ns.getServerMoneyAvailable("home") > cost) {
             if (ns.upgradePurchasedServer(server, currentSize)) {
                 atRam++;
+                lastMessage = `Upgraded server ${server}`;
             } else {
-                ns.print(
-                    `Failed to upgrade server ${server} to ${currentSize}`
-                );
+                lastMessage = `Failed to upgrade server ${server} to ${currentSize}`;
             }
         }
         return cost;
@@ -155,6 +157,7 @@ export async function main(ns: NS) {
         } else {
             ns.print(`Buying: Disabled`);
         }
+        ns.print(`Message: ${lastMessage}`);
         ns.print(
             `Size: ${currentSize}gb /${size}gb ${atRam}/${max} ${
                 cost !== undefined ? `Cost: ${ns.formatNumber(cost, 2)}` : ""

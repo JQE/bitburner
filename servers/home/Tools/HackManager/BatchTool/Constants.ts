@@ -6,6 +6,6 @@ export const SCRIPTS = {
     grow: "tGrow.js",
     weaken2: "tWeaken.js",
 };
-export const COSTS = { hack: 1.8, weaken1: 1.85, grow: 1.85, weaken2: 1.85 };
+export const COSTS = { hack: 1.75, weaken1: 1.85, grow: 1.8, weaken2: 1.85 };
 
 export const RESERVED_HOME_RAM = 20;

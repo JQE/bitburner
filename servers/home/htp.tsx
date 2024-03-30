@@ -169,7 +169,7 @@ export async function main(ns: NS) {
 
     while (running) {
         ns.clearLog();
-        ns.print(`Heart: ${ns.heart.break()}`);
+        ns.print(`Heart: ${ns.formatNumber(ns.heart.break(), 2)}`);
         await ns.asleep(1000);
     }
     ns.closeTail();

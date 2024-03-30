@@ -95,7 +95,8 @@ export class ShareHack {
                 return this.ns.hasRootAccess(server);
             },
             "home",
-            this.toolCount
+            this.toolCount,
+            ["home"]
         );
     };
 
@@ -118,9 +119,14 @@ export class ShareHack {
                 if (numPorts >= 5) {
                     this.ns.sqlinject(server);
                 }
-                this.ns.nuke(server);
-                this.ns.scp(this.hackScript, server);
-                this.ns.exec(this.hackScript, server);
+                const maxRam = this.ns.getServerMaxRam(server);
+                const used = this.ns.getServerUsedRam(server);
+                const threads = Math.floor((maxRam - used) / 4);
+                if (threads > 0) {
+                    this.ns.nuke(server);
+                    this.ns.scp(this.hackScript, server);
+                    this.ns.exec(this.hackScript, server, threads);
+                }
             }
         });
     };
@@ -129,7 +135,7 @@ export class ShareHack {
             this.ns.kill(this.hackScript, server);
         });
     };
-    processHack = () => {
+    processHack = async () => {
         const oldTools = this.toolCount;
         this.toolCount = this.getToolCount();
         if (this.toolCount > oldTools) {
@@ -137,9 +143,11 @@ export class ShareHack {
             this.hackServers();
             this.runJobs();
         }
+        this.ns.print(`Share Powre: ${this.ns.getSharePower()}`);
         this.ns.print(
             `Server Count: ${this.servers.length}    Target: ${this.target}`
         );
         this.ns.print(`Current Tool Count: ${this.toolCount}`);
+        await this.ns.sleep(1000);
     };
 }
