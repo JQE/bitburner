@@ -1,9 +1,10 @@
 import { NetscriptPort } from "NetscriptDefinitions";
 import { COSTS, SCRIPTS, WORKERS } from "./BatchTool/Constants";
+import { BATCHPORT, HACKPORT } from "../../Constants";
+import { HackInfo, HackStage } from "../../types";
 
 export class BatchHack {
     private ns: NS;
-    private hackScript: string = "ShareHack.js";
     private servers: string[] = [];
     private target: string;
     private toolCount: number = -1;
@@ -28,12 +29,11 @@ export class BatchHack {
     private maxMoney;
     private hackChance;
     private firstRun = true;
-    private lastOptimize = Date.now();
 
     constructor(ns: NS, target: string = "joesguns") {
         this.ns = ns;
         this.target = target;
-        this.dataPort = this.ns.getPortHandle(this.ns.pid);
+        this.dataPort = this.ns.getPortHandle(BATCHPORT);
         this.maxMoney = this.ns.getServerMaxMoney(this.target);
     }
 
@@ -263,7 +263,7 @@ export class BatchHack {
                     },
                     this.target,
                     0,
-                    this.ns.pid,
+                    BATCHPORT,
                     report
                 );
                 if (!w1Pid)
@@ -286,7 +286,7 @@ export class BatchHack {
                     },
                     this.target,
                     wTime + 5 - gTime,
-                    this.ns.pid,
+                    BATCHPORT,
                     report
                 );
                 if (!gPid) throw new Error("Failed to start grow threads");
@@ -308,7 +308,7 @@ export class BatchHack {
                     },
                     this.target,
                     10,
-                    this.ns.pid,
+                    BATCHPORT,
                     report
                 );
                 if (!w2Pid)
@@ -416,12 +416,6 @@ export class BatchHack {
             }
         }
         this.greedStep -= stepValue;
-        this.ns.print(
-            `Optimizing Greed: ${this.ns.formatNumber(
-                this.greedStep,
-                2
-            )} / \$${this.ns.formatNumber(this.best, 2)}`
-        );
         if (this.greedStep <= 0) {
             if (this.best <= 0) {
                 this.clearHack();
@@ -429,7 +423,6 @@ export class BatchHack {
             } else {
                 this.isOptimizing = false;
                 this.isOptimized = true;
-                this.lastOptimize = Date.now() + this.runTime;
                 this.error = "";
             }
         }
@@ -481,7 +474,7 @@ export class BatchHack {
                 { threads: hThreads, temporary: true },
                 this.target,
                 wTime - 5 - hTime,
-                this.ns.pid,
+                BATCHPORT,
                 false
             );
 
@@ -491,7 +484,7 @@ export class BatchHack {
                 { threads: wThreads1, temporary: true },
                 this.target,
                 0,
-                this.ns.pid,
+                BATCHPORT,
                 false
             );
 
@@ -501,7 +494,7 @@ export class BatchHack {
                 { threads: gThreads, temporary: true },
                 this.target,
                 wTime + 5 - gTime,
-                this.ns.pid,
+                BATCHPORT,
                 false
             );
 
@@ -511,7 +504,7 @@ export class BatchHack {
                 { threads: wThreads2, temporary: true },
                 this.target,
                 10,
-                this.ns.pid,
+                BATCHPORT,
                 report
             );
         }
@@ -571,7 +564,7 @@ export class BatchHack {
         this.hackChance = this.ns.hackAnalyzeChance(this.target);
         this.maxMoney = this.ns.getServerMaxMoney(this.target);
         if (this.error !== undefined && this.error !== "") {
-            this.ns.print(this.error);
+            console.log(this.error);
         } else {
             if (
                 (!this.isPrepping &&
@@ -606,21 +599,16 @@ export class BatchHack {
                         this.killall();
                         this.clearHack();
                         this.prepServer();
-                    } else if (
-                        !this.isOptimized ||
-                        (this.firstRun === false &&
-                            this.lastOptimize < Date.now())
-                    ) {
+                    } else if (!this.isOptimized || this.firstRun === false) {
                         this.isOptimized = false;
                         this.greedStep = 99;
                         this.greed = 0;
+                        this.checkTime = Date.now() + this.runTime;
                         this.startOptimizing();
                     } else if (!this.isBatching) {
                         this.firstRun = false;
                         this.checkTime = Date.now() + this.runTime;
                         this.initializeBatch();
-                    } else {
-                        this.checkTime = Date.now() + this.runTime;
                     }
                 }
             } else {
@@ -628,15 +616,12 @@ export class BatchHack {
                     this.checkTime = this.prepTime + Date.now();
                     while (!this.dataPort.empty()) {
                         const info = this.dataPort.read();
-                        console.log(info);
                         if (
                             info.startsWith("weaken") ||
                             info.startsWith("grow")
                         ) {
                             this.prepServers--;
-                            console.log(this.prepServers);
                             if (this.prepServers <= 0) {
-                                console.log("starting over");
                                 this.isPrepping = false;
                             }
                         }
@@ -655,73 +640,31 @@ export class BatchHack {
                         }
                     }
                 }
-
-                if (this.isPrepping) {
-                    this.ns.print(
-                        `Prepping for ${this.formatTime(
-                            this.prepTime - Date.now()
-                        )} ${
-                            this.prepThreadsLeft > 0
-                                ? `${this.prepThreadsLeft} threads left`
-                                : ""
-                        }`
-                    );
-                    if (this.prepThreadsLeft > 0) {
-                        this.ns.print(
-                            `Total Prep Time: ${this.formatTime(
-                                this.totalPrepTime - Date.now()
-                            )}`
-                        );
-                    }
-                }
             }
-            this.ns.print(
-                `Progresss: ${
-                    this.isPrepping
-                        ? "Prepping"
-                        : `${
-                              this.isOptimizing
-                                  ? "Optimizing"
-                                  : `${
-                                        this.isBatching ? "Batching" : "Unknown"
-                                    }`
-                          }`
-                }`
-            );
-            if (this.isBatching) {
-                this.ns.print(
-                    `Chance: ${this.ns.formatNumber(
-                        this.hackChance,
-                        2
-                    )}    Greed: ${this.ns.formatNumber(this.greed, 3)}`
-                );
-                this.ns.print(
-                    `Reset: ${this.formatTime(this.checkTime - Date.now())}`
-                );
-            }
-            this.ns.print(
-                `Server Count: ${
-                    this.isPrepping ? this.prepServers : this.hackingServers
-                }    Target: ${this.target}`
-            );
-            const security = this.ns.getServerSecurityLevel(this.target);
-            const minSec = this.ns.getServerMinSecurityLevel(this.target);
-            const money = this.ns.getServerMoneyAvailable(this.target);
-            const maxMoney = this.ns.getServerMaxMoney(this.target);
-            this.ns.print(
-                `Stats: ${this.ns.formatNumber(
-                    security,
-                    2
-                )} / ${this.ns.formatNumber(
-                    minSec,
-                    2
-                )} \$${this.ns.formatNumber(
-                    money,
-                    2
-                )} / \$${this.ns.formatNumber(maxMoney, 2)}`
-            );
-            this.ns.print(`Current Tool Count: ${this.toolCount}`);
         }
+        const hackInfo: HackInfo = JSON.parse(this.ns.peek(HACKPORT));
+        if (this.isPrepping) {
+            hackInfo.Stage = HackStage.Prepping;
+            hackInfo.Count = this.prepServers;
+        } else if (this.isOptimizing) {
+            hackInfo.Stage = HackStage.Optimizing;
+        } else if (this.isBatching) {
+            hackInfo.Stage = HackStage.Batching;
+            hackInfo.Count = this.hackingServers;
+        }
+        hackInfo.Greed = this.greed;
+        hackInfo.GreedStep = this.greedStep;
+        hackInfo.Best = this.best;
+        hackInfo.Chance = this.hackChance;
+        hackInfo.Error = this.error;
+        hackInfo.Prep = this.prepTime;
+        hackInfo.TotalPrep =
+            this.prepThreadsLeft > 0 ? this.totalPrepTime : undefined;
+        hackInfo.Tools = this.toolCount;
+        hackInfo.Target = this.target;
+        hackInfo.Reset = this.checkTime;
+        this.ns.clearPort(HACKPORT);
+        this.ns.writePort(HACKPORT, JSON.stringify(hackInfo));
         if (this.isOptimizing || this.startingBatch) {
             await this.ns.sleep(5);
         } else {
