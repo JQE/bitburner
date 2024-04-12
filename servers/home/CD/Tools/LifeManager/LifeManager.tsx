@@ -102,13 +102,16 @@ export async function main(ns: NS) {
         }
     };
 
-    const findFactionForAugs = () => {
+    const findFactionForAugs = (): [string, string] => {
         for (let i = 0; i < FactionsForAugs.length; i++) {
             const newFaction = FactionsForAugs[i];
             const allAugs = ns.singularity.getOwnedAugmentations(true);
             for (let a = 0; a < (newFaction[2] as string[]).length; a++) {
                 if (!allAugs.includes((newFaction[2] as string[])[a])) {
-                    return [newFaction, (newFaction[2] as string[])[a]];
+                    return [
+                        newFaction[0] as string,
+                        (newFaction[2] as string[])[a],
+                    ];
                 }
             }
         }
