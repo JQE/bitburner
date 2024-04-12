@@ -49,6 +49,7 @@ export const ServerControl = ({
                         className="w-full p-1 text-gray-500 bg-white border rounded-md shadow-sm outline-none appearance-none focus:border-indigo-600"
                         value={size}
                         onChange={handleSize}
+                        title="ServerSize"
                     >
                         {sizeList.map((ramSize) => {
                             return <option value={ramSize}>{ramSize}GB</option>;
