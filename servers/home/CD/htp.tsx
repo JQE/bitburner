@@ -34,6 +34,45 @@ export async function main(ns: NS) {
     let running = true;
     const tm = new TailModal(ns, doc);
 
+    let size = 8;
+    let currentSize = 99999999999;
+    let max = ns.getPurchasedServerLimit();
+    let privateServers = ns.getPurchasedServers();
+    let count = privateServers.length;
+    let atRam = 0;
+    let maxRam = ns.getPurchasedServerMaxRam();
+
+    const countAtRam = () => {
+        let tempAtRam = 0;
+        servers.forEach((server) => {
+            const info = ns.getServer(server);
+            if (info.maxRam >= currentSize) {
+                tempAtRam++;
+            }
+        });
+
+        return tempAtRam;
+    };
+
+    atRam = count;
+    if (count >= max) {
+        atRam = 0;
+        privateServers.forEach((server) => {
+            const info = ns.getServer(server);
+            if (info.maxRam < currentSize) {
+                currentSize = info.maxRam;
+            }
+        });
+        atRam = countAtRam();
+        while (atRam === count && currentSize < maxRam) {
+            currentSize *= 2;
+            atRam = countAtRam();
+        }
+    }
+    size = currentSize;
+    if (size === 99999999999) size = 8;
+    if (currentSize === 99999999999) currentSize = 8;
+
     const onQuit = () => {
         running = false;
     };
@@ -64,11 +103,11 @@ export async function main(ns: NS) {
         Enabled: false,
         Stage: ServerStage.Buying,
         Message: "",
-        CurrentSize: 8,
-        MaxSize: 8,
+        CurrentSize: currentSize,
+        MaxSize: currentSize,
         Cost: 0,
-        AtRam: 0,
-        Max: 0,
+        AtRam: atRam,
+        Max: max,
     };
     ns.clearPort(SERVERPORT);
     ns.writePort(SERVERPORT, JSON.stringify(defaultServer));
