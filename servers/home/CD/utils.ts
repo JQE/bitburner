@@ -14,9 +14,17 @@ export const formatTime = (miliseconds) => {
     }
     let outputstring = "";
     if (minutes > 0) {
-        outputstring += `${minutes}:`;
+        if (minutes > 9) {
+            outputstring += `${minutes}:`;
+        } else {
+            outputstring += `0${minutes}:`;
+        }
     }
-    outputstring += `${seconds}`;
+    if (seconds > 9) {
+        outputstring += `${seconds}`;
+    } else {
+        outputstring += `0${seconds}`;
+    }
     return outputstring;
 };
 
@@ -57,4 +65,25 @@ export const actionToString = (task: Task) => {
     if (task.type === "FACTION") {
         return task.factionWorkType;
     }
+};
+
+export const findServerPath = (ns: NS, target: string): string[] => {
+    let path = [];
+    const recursiveScan = (current: string, parent: string[]) => {
+        let newParent = parent;
+        if (current === target) {
+            parent.forEach((info) => {
+                path.push(info);
+            });
+        }
+        const servers = ns.scan(current);
+        if (current !== "home") servers.shift();
+        for (const server of servers) {
+            parent.push(server);
+            recursiveScan(server, parent);
+            parent.pop();
+        }
+    };
+    recursiveScan("home", []);
+    return path;
 };

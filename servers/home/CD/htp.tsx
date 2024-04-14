@@ -44,7 +44,7 @@ export async function main(ns: NS) {
 
     const countAtRam = () => {
         let tempAtRam = 0;
-        servers.forEach((server) => {
+        privateServers.forEach((server) => {
             const info = ns.getServer(server);
             if (info.maxRam >= currentSize) {
                 tempAtRam++;
@@ -156,13 +156,16 @@ export async function main(ns: NS) {
                 )}/s`
             );
             ns.print(
-                `Gear: \x1b[36m${gangInfo.BuyGear}    Augs: \x1b[36m${gangInfo.BuyAugs}`
+                `Gear: \x1b[36m${gangInfo.BuyGear}    \x1b[32mAugs: \x1b[36m${gangInfo.BuyAugs}`
             );
             ns.print(
                 `Rep: \x1b[36m${ns.formatNumber(
                     gang.respect,
                     2
-                )} : Asc: \x1b[36m${ns.formatNumber(gangInfo.BaseRep, 2)}`
+                )}    \x1b[32mAsc: \x1b[36m${ns.formatNumber(
+                    gangInfo.BaseRep,
+                    2
+                )}`
             );
             ns.print(`Power: \x1b[36m${ns.formatNumber(gang.power)}`);
             ns.print(`Territory: \x1b[36m${ns.formatPercent(gang.territory)}`);
@@ -189,7 +192,7 @@ export async function main(ns: NS) {
             }
             ns.print(`Message: \x1b[36m${serverInfo.Message}`);
             ns.print(
-                `Size: \x1b[36m${serverInfo.CurrentSize}gb /${serverInfo.MaxSize}gb`
+                `Size: \x1b[36m${serverInfo.CurrentSize}gb / ${serverInfo.MaxSize}gb`
             );
             ns.print(`Count: \x1b[36m${serverInfo.AtRam}/${serverInfo.Max}`);
             ns.print(
@@ -332,6 +335,15 @@ export async function main(ns: NS) {
                     lifeInfo.Action ? lifeInfo.Action : "Unknown"
                 }`
             );
+            if (lifeInfo.Faction !== undefined && lifeInfo.Faction !== "") {
+                ns.print(`Current Faction: \x1b[36m${lifeInfo.Faction}`);
+            }
+
+            const allAugs = ns.singularity.getOwnedAugmentations(true).length;
+            const ownedAugs =
+                ns.singularity.getOwnedAugmentations(false).length;
+            const purchased = allAugs - ownedAugs;
+            ns.print(`Purchased Augs: \x1b[36m${purchased}`);
         }
     };
 

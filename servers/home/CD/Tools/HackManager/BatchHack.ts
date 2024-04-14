@@ -168,7 +168,7 @@ export class BatchHack {
     private hackServers = () => {
         this.servers = this.getServers(
             (server) => {
-                if (server === "home") return false;
+                if (server === "home") return true;
                 this.target = this.checkTarget(server, this.target, true);
                 this.copyScripts(server, WORKERS, true);
                 this.nukeTarget(server);
@@ -176,7 +176,7 @@ export class BatchHack {
             },
             "home",
             this.toolCount,
-            ["home"]
+            []
         );
     };
 
@@ -407,7 +407,11 @@ export class BatchHack {
         );
 
         if (Math.max(hThreads, gThreads) <= maxThreads) {
-            const batchCount = this.testThreads("pserver-0");
+            let batchCount = 0;
+            this.servers.forEach((server) => {
+                batchCount += this.testThreads(server);
+            });
+
             const income =
                 (tGreed * maxMoney * batchCount) / (5 * 4 * batchCount + wTime);
             if (income > this.best) {
@@ -464,11 +468,13 @@ export class BatchHack {
         let batchCount = Math.floor(availRam / totalCost);
         if (batchCount > 0) {
             this.hackingServers++;
+        } else {
+            console.log(`No batches for ${server}`);
         }
         while (batchCount > 0) {
             batchCount--;
             const report = batchCount === 0;
-            this.ns.exec(
+            const hpid = this.ns.exec(
                 SCRIPTS.hack,
                 server,
                 { threads: hThreads, temporary: true },
@@ -477,8 +483,10 @@ export class BatchHack {
                 BATCHPORT,
                 false
             );
-
-            this.ns.exec(
+            if (hpid <= 0) {
+                console.log(`Failed to launch hack`);
+            }
+            const w1pid = this.ns.exec(
                 SCRIPTS.weaken1,
                 server,
                 { threads: wThreads1, temporary: true },
@@ -487,8 +495,11 @@ export class BatchHack {
                 BATCHPORT,
                 false
             );
+            if (w1pid <= 0) {
+                console.log(`Failed to launch w1`);
+            }
 
-            this.ns.exec(
+            const gpid = this.ns.exec(
                 SCRIPTS.grow,
                 server,
                 { threads: gThreads, temporary: true },
@@ -497,8 +508,11 @@ export class BatchHack {
                 BATCHPORT,
                 false
             );
+            if (gpid <= 0) {
+                console.log(`Failed to launch grow`);
+            }
 
-            this.ns.exec(
+            const w2pid = this.ns.exec(
                 SCRIPTS.weaken2,
                 server,
                 { threads: wThreads2, temporary: true },
@@ -507,6 +521,9 @@ export class BatchHack {
                 BATCHPORT,
                 report
             );
+            if (w2pid <= 0) {
+                console.log(`Failed to launch w2`);
+            }
         }
     };
 
@@ -517,6 +534,7 @@ export class BatchHack {
         }
         const server = this.servers[this.serverIndex];
         this.serverIndex++;
+        console.log(`Batching ${server}`);
         this.runBatch(server);
     };
 
@@ -609,6 +627,8 @@ export class BatchHack {
                         this.firstRun = false;
                         this.checkTime = Date.now() + this.runTime;
                         this.initializeBatch();
+                    } else {
+                        this.checkTime = Date.now() + this.runTime;
                     }
                 }
             } else {

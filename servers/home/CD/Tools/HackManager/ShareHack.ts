@@ -90,17 +90,14 @@ export class ShareHack {
     };
 
     private hackServers = () => {
-        this.servers = this.getServers(
-            (server) => {
-                if (server === "home") return false;
-                this.copyScripts(server, [this.hackScript], true);
-                this.nukeTarget(server);
-                return this.ns.hasRootAccess(server);
-            },
-            "home",
-            this.toolCount,
-            ["home"]
-        );
+        this.servers = this.getServers((server) => {
+            if (server === "home") return false;
+            //this.target = this.checkTarget(server, this.target, true);
+            this.copyScripts(server, [this.hackScript], true);
+            this.nukeTarget(server);
+            const hasRootAccess = this.ns.hasRootAccess(server);
+            return hasRootAccess;
+        });
     };
 
     private runJobs = () => {
@@ -140,13 +137,14 @@ export class ShareHack {
     };
     processHack = async () => {
         const hackInfo: HackInfo = JSON.parse(this.ns.peek(HACKPORT));
-        const oldTools = hackInfo.Tools;
-        hackInfo.Tools = this.getToolCount();
-        if (hackInfo.Tools > oldTools) {
+        const oldTools = this.toolCount;
+        this.toolCount = this.getToolCount();
+        if (this.toolCount > oldTools) {
             this.killall();
             this.hackServers();
             this.runJobs();
         }
+        hackInfo.Tools = this.toolCount;
         hackInfo.Count = this.servers.length;
         hackInfo.Target = this.target;
         this.ns.clearPort(HACKPORT);
