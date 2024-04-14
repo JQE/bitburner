@@ -12,6 +12,7 @@ const localScripts = [
     "CD/Tools/Gangs/Gangs.js",
     "CD/Tools/HackManager/HackManager.js",
     "CD/Tools/ServerManager/ServerManager.js",
+    "CD/Tools/LifeManager/LifeManager.js",
 ];
 
 export async function main(ns: NS) {
