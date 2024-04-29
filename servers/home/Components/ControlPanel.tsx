@@ -3,6 +3,7 @@ import { GangControl } from "./GangControl";
 import { ServerControl } from "./ServerControl";
 import { HackControl } from "./HackControl";
 import { LifeControl } from "./LifeControl";
+import { HacknetControl } from "./HacknetControl";
 
 interface IControlPanelProps {
     ns: NS;
@@ -17,6 +18,7 @@ export const ControlPanel = ({ ns, onQuit }: IControlPanelProps) => {
                 <ServerControl ns={ns} />
                 <HackControl ns={ns} />
                 <LifeControl ns={ns} />
+                <HacknetControl ns={ns} />
                 <button
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-fulll"
                     onClick={onQuit}

@@ -1,8 +1,7 @@
 import { GangMemberInfo } from "NetscriptDefinitions";
 import React from "react";
-import { TailModal } from "servers/home/Utils/TailModal";
-import Style from "../../../tailwind.css";
-import { GangControl } from "./Components/GangControl";
+import { GangInfo } from "../../types";
+import { GANGPORT } from "../../Constants";
 
 export enum ActivityFocus {
     Money = 1,
@@ -13,40 +12,16 @@ export enum ActivityFocus {
 
 export async function main(ns: NS) {
     let members: string[] = ns.gang.getMemberNames();
-    const dataport = ns.getPortHandle(ns.pid);
-    dataport.clear();
+    const dataport = ns.getPortHandle(GANGPORT);
+    let gangInfo: GangInfo = JSON.parse(dataport.peek());
     const equipment: string[] = [];
     const augs: string[] = [];
     const baseName = "Fredalina";
     let baseJob = "Mug People";
-    let activity: ActivityFocus = ActivityFocus.Money;
     let baseRep = 0;
     let respNum = 0;
     let moenyNum = 0;
     let warfareNum = 0;
-
-    let buyAugs = false;
-    let buyEquipment = false;
-
-    const onBuy = (): boolean => {
-        buyEquipment = !buyEquipment;
-        return buyEquipment;
-    };
-
-    const onBuyAugs = (): boolean => {
-        buyAugs = !buyAugs;
-        return buyAugs;
-    };
-
-    const onActivity = (selection: number): ActivityFocus => {
-        activity = selection;
-        return activity;
-    };
-
-    const onJob = (job: string): string => {
-        baseJob = job;
-        return baseJob;
-    };
 
     const eqp = ns.gang.getEquipmentNames();
     eqp.forEach((item) => {
@@ -66,22 +41,18 @@ export async function main(ns: NS) {
                     const cash = ns.getServerMoneyAvailable("home");
                     if (cost < cash) {
                         ns.gang.purchaseEquipment(member.name, item);
-                        ns.print(`Purchases ${item} for ${member.name}`);
                         return;
                     }
                 }
             });
         } else {
-            if (buyAugs) {
+            if (gangInfo.BuyAugs) {
                 augs.forEach((item) => {
                     if (!member.upgrades.includes(item)) {
                         const cost = ns.gang.getEquipmentCost(item);
                         const cash = ns.getServerMoneyAvailable("home");
                         if (cost < cash) {
                             if (ns.gang.purchaseEquipment(member.name, item)) {
-                                ns.print(
-                                    `Purchases ${item} for ${member.name}`
-                                );
                             }
                         }
                     }
@@ -99,7 +70,6 @@ export async function main(ns: NS) {
                 name = `${baseName}${members.length + itr}`;
             }
             members.push(name);
-            ns.print(`Recrtuiting new member ${name}`);
         }
     };
 
@@ -155,7 +125,7 @@ export async function main(ns: NS) {
         if (info.hack < 200) {
             return "Train Hacking";
         }
-        if (activity === ActivityFocus.Balance) {
+        if (gangInfo.Activity === ActivityFocus.Balance) {
             if (moenyNum < members.length / 3) {
                 moenyNum++;
                 return processJob(info, ActivityFocus.Money);
@@ -166,10 +136,10 @@ export async function main(ns: NS) {
                 warfareNum++;
                 return processJob(info, ActivityFocus.Warfare);
             }
-        } else if (activity === ActivityFocus.Warfare) {
+        } else if (gangInfo.Activity === ActivityFocus.Warfare) {
             return "Territory Warfare";
         }
-        return activity === ActivityFocus.Money
+        return gangInfo.Activity === ActivityFocus.Money
             ? "Human Trafficking"
             : "Terrorism";
     };
@@ -178,58 +148,44 @@ export async function main(ns: NS) {
         const job = getJob(member);
         if (job !== member.task) {
             ns.gang.setMemberTask(member.name, job);
-            ns.print(`Member ${member.name} is now doing task ${job}`);
         }
     };
 
     const ProcessMember = (member: GangMemberInfo) => {
         upgradeJob(member);
-        if (buyEquipment) {
+        if (gangInfo.BuyGear) {
             buyUpgrades(member);
         }
-        const gangInfo = ns.gang.getGangInformation();
+        const gangInformation = ns.gang.getGangInformation();
 
-        if (gangInfo.respect > baseRep || gangInfo.respect === 1) {
+        if (
+            gangInformation.respect > baseRep ||
+            gangInformation.respect === 1
+        ) {
             if (ns.gang.getAscensionResult(member.name)?.str > 1.5) {
-                baseRep = gangInfo.respect;
+                baseRep = gangInformation.respect;
                 ns.gang.ascendMember(member.name);
             }
         }
     };
 
     /** Alias for document to prevent excessive RAM use */
-    const doc = (0, eval)("document") as Document;
     ns.disableLog("ALL");
-    ns.tail();
 
-    const tm = new TailModal(ns, doc);
+    const updateGangLog = () => {
+        const gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));
+        gangInfo.MemberCount = members.length;
+        gangInfo.Duration = duration;
+        gangInfo.BaseRep = baseRep;
+        ns.clearPort(GANGPORT);
+        ns.writePort(GANGPORT, JSON.stringify(gangInfo));
+    };
 
-    tm.renderCustomModal(
-        <>
-            <Style></Style>
-            <GangControl
-                ns={ns}
-                defaultActivity={activity}
-                onActivity={onActivity}
-                defaultBuy={buyEquipment}
-                onBuy={onBuy}
-                defaultBuyAugs={buyAugs}
-                onBuyAugs={onBuyAugs}
-                defaultJob={baseJob}
-                onJob={onJob}
-            ></GangControl>
-        </>,
-        "Gang Control Panel",
-        300
-    );
-
-    ns.atExit(() => {
-        ns.closeTail();
-    });
     let duration = 1;
 
-    while (dataport.empty()) {
-        if (ns.gang.inGang()) {
+    while (gangInfo.Enabled) {
+        gangInfo = JSON.parse(dataport.peek());
+        if (ns.gang && ns.gang.inGang()) {
             manageRecruitment();
             respNum = 0;
             moenyNum = 0;
@@ -238,41 +194,10 @@ export async function main(ns: NS) {
             members.forEach((member) => {
                 ProcessMember(ns.gang.getMemberInformation(member));
             });
-            const gang = ns.gang.getGangInformation();
             ns.clearLog();
-            ns.print(
-                `Have members: ${members.length}    Money: ${ns.formatNumber(
-                    gang.moneyGainRate * duration,
-                    2
-                )}/s`
-            );
-            ns.print(
-                `Buying Gear: ${buyEquipment}   Buying Augments: ${buyAugs}`
-            );
-            ns.print(``);
-            ns.print(
-                `Respect: ${ns.formatNumber(
-                    gang.respectGainRate * duration,
-                    2
-                )}/s    Wanted: ${ns.formatNumber(
-                    gang.wantedLevelGainRate * duration,
-                    2
-                )}/s`
-            );
-            ns.print(
-                `Gang Rep: ${ns.formatNumber(
-                    gang.respect,
-                    2
-                )} : Ascension: ${ns.formatNumber(baseRep, 2)}`
-            );
-            ns.print(
-                `Power: ${ns.formatNumber(
-                    gang.power
-                )}   Territory: ${ns.formatPercent(gang.territory)}`
-            );
+            updateGangLog();
             duration = (await ns.gang.nextUpdate()) / 1000;
         } else {
-            ns.print(`Current heart: ${ns.heart.break()}`);
             await ns.sleep(1000);
         }
     }

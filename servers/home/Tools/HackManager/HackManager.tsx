@@ -1,68 +1,31 @@
 import React from "react";
 import { TailModal } from "servers/home/Utils/TailModal";
 import { BasicHack } from "./BasicHack";
-import { HackControl } from "./Components/HackControl";
+import { HackControl } from "../../Components/HackControl";
 import { ShareHack } from "./ShareHack";
 import { BatchHack } from "./BatchHack";
+import { HackInfo, HackType } from "../../types";
+import { HACKPORT } from "../../Constants";
 
-export enum HackType {
-    Basic = 1,
-    Share,
-    Batch,
-}
 const localScripts = [
     "htp.js",
     "Tools/Gangs/Gangs.js",
     "Tools/HackManager/HackManager.js",
     "Tools/ServerManager/ServerManager.js",
+    "Tools/LifeManager/LifeManager.js",
+    "Tools/Hacknet/HacknetManager.js",
 ];
 
 export async function main(ns: NS) {
     /** Alias for document to prevent excessive RAM use */
     const doc = (0, eval)("document") as Document;
     ns.disableLog("ALL");
-    ns.tail();
 
-    const tm = new TailModal(ns, doc);
-
-    let hack: HackType = HackType.Basic;
-    let hacking = false;
     let running = true;
     let target = "n00dles";
-    let exiting = false;
     const basicHack: BasicHack = new BasicHack(ns, "joesguns");
     const shareHack: ShareHack = new ShareHack(ns, target);
     const batchHack: BatchHack = new BatchHack(ns, target);
-
-    const onHackType = (type: HackType): HackType => {
-        hack = type;
-        return hack;
-    };
-
-    const onHack = (): boolean => {
-        hacking = !hacking;
-        if (hacking === false) {
-            //killAll();
-            exiting = true;
-            batchHack.clearHack();
-        }
-        return hacking;
-    };
-
-    tm.renderCustomModal(
-        <HackControl
-            ns={ns}
-            defaultHacking={hacking}
-            onHack={onHack}
-            defaultType={hack}
-            onHackType={onHackType}
-        ></HackControl>,
-        "Hack Control Panel",
-        300
-    );
-    ns.atExit(() => {
-        ns.closeTail();
-    });
 
     const getServers = (
         lambdaCondition = (hostname: string) => true,
@@ -97,35 +60,18 @@ export async function main(ns: NS) {
             }
         });
     };
-
-    const hackTypeToString = () => {
-        switch (hack) {
-            case 1:
-                return "Basic";
-            case 2:
-                return "Share";
-            case 3:
-                return "Batch";
-        }
-    };
+    ns.atExit(() => {
+        killAll();
+    });
 
     while (running) {
-        ns.clearLog();
-        ns.print(`Hacking Enabled: ${hacking}    Type: ${hackTypeToString()}`);
-        if (hacking) {
-            if (hack === HackType.Basic) {
-                await basicHack.processHack();
-            } else if (hack === HackType.Share) {
-                await shareHack.processHack();
-            } else {
-                await batchHack.processHack();
-            }
+        const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
+        if (hackInfo.Type === HackType.Basic) {
+            await basicHack.processHack();
+        } else if (hackInfo.Type === HackType.Share) {
+            await shareHack.processHack();
         } else {
-            if (exiting) {
-                killAll();
-                exiting = false;
-            }
-            await ns.asleep(1000);
+            await batchHack.processHack();
         }
     }
 }

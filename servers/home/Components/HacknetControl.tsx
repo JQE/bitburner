@@ -1,63 +1,56 @@
 import React, { MouseEvent, useEffect, useState } from "react";
-import { ActivityFocus } from "../Tools/Gangs/Gangs";
-import { LifeInfo } from "../types";
-import { LIFEPORT } from "../Constants";
+import { HacknetInfo } from "../types";
+import { HACKNETPORT } from "../Constants";
 
-interface ILifeControlProps {
+interface IHacknetControlProps {
     ns: NS;
 }
 
-export const LifeControl = ({ ns }: ILifeControlProps) => {
+export const HacknetControl = ({ ns }: IHacknetControlProps) => {
     const [showModal, setShowModal] = useState(false);
     const [enabled, setEnabled] = useState(false);
+    const [buy, setBuy] = useState(false);
+    const [upgrade, setUpgrade] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [lifePid, setLifePid] = useState(-1);
-    const [joinGang, setJoinGang] = useState(false);
-    const [manageWork, setMangeWork] = useState(true);
-    const [buyAugs, setBuyAugs] = useState(false);
+    const [hacknetPid, setHacknetPid] = useState(-1);
 
     const handleEnabled = () => {
         setEnabled(!enabled);
     };
-
-    const handleJoinGang = () => {
-        setJoinGang(!joinGang);
+    const handleBuy = () => {
+        setBuy(!buy);
     };
-    const handleManageWork = () => {
-        setMangeWork(!manageWork);
-    };
-    const handleBuyAugs = () => {
-        setBuyAugs(!buyAugs);
+    const handleUpgrade = () => {
+        setUpgrade(!upgrade);
     };
 
     const onSave = () => {
         setLoading(true);
-        let newLifePid = lifePid;
+        let newHacknetPid = hacknetPid;
         let newEnabled = enabled;
         if (newEnabled === true) {
-            ns.scriptKill("CD/Tools/LifeManager/LifeManager.js", "home");
-            newLifePid = ns.exec("CD/Tools/LifeManager/LifeManager.js", "home");
-            if (newLifePid === 0) {
+            ns.scriptKill("Tools/Hacknet/HacknetManager.js", "home");
+            newHacknetPid = ns.exec("Tools/Hacknet/HacknetManager.js", "home");
+            if (newHacknetPid === 0) {
                 ns.print("Failed to run Hack script");
-                newLifePid = -1;
+                newHacknetPid = -1;
                 newEnabled = false;
             }
         } else {
-            if (lifePid !== 0) {
-                ns.kill("CD/Tools/LifeManager/LifeManager.js", "home");
-                newLifePid = -1;
+            if (hacknetPid !== 0) {
+                ns.kill("Tools/Hacknet/HacknetManager.js", "home");
+                newHacknetPid = -1;
                 newEnabled = false;
             }
         }
-        setLifePid(newLifePid);
+        setHacknetPid(newHacknetPid);
         setEnabled(newEnabled);
-        const lifeInfo: LifeInfo = JSON.parse(ns.peek(LIFEPORT));
-        lifeInfo.Enabled = newEnabled;
-        lifeInfo.JoinGang = joinGang;
-        lifeInfo.ManageWork = manageWork;
-        lifeInfo.BuyAugs = buyAugs;
-        ns.clearPort(LIFEPORT);
-        ns.writePort(LIFEPORT, JSON.stringify(lifeInfo));
+        const hacknetInfo: HacknetInfo = JSON.parse(ns.peek(HACKNETPORT));
+        hacknetInfo.Enabled = newEnabled;
+        hacknetInfo.Buy = buy;
+        hacknetInfo.Upgrade = upgrade;
+        ns.clearPort(HACKNETPORT);
+        ns.writePort(HACKNETPORT, JSON.stringify(hacknetInfo));
         setShowModal(false);
         setLoading(false);
     };
@@ -69,7 +62,7 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
                 type="button"
                 onClick={() => setShowModal(true)}
             >
-                Life
+                Hacknet
             </button>
             {showModal ? (
                 <>
@@ -91,7 +84,7 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
                                 <div className="border-0 rounded-lg shadow-lg relative flex flex-col w-full bg-white outline-none focus:outline-none">
                                     <div className="flex items-start justify-between p-5 border-b border-solid border-gray-300 rounded-t ">
                                         <h3 className="text-3xl font=semibold">
-                                            Hack Info
+                                            Hacknet Info
                                         </h3>
                                         <button
                                             className="bg-transparent border-0 text-black float-right"
@@ -112,37 +105,27 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
                                                 }`}
                                                 onClick={handleEnabled}
                                             >
-                                                Enable Life
+                                                Enable hacknet
                                             </button>
                                             <button
                                                 className={`text-white font-bold py-2 px-4 rounded w-full ${
-                                                    joinGang
+                                                    buy
                                                         ? "bg-red-500"
                                                         : "bg-green-500"
                                                 }`}
-                                                onClick={handleJoinGang}
+                                                onClick={handleBuy}
                                             >
-                                                Join Gang
+                                                Buy Servers
                                             </button>
                                             <button
                                                 className={`text-white font-bold py-2 px-4 rounded w-full ${
-                                                    manageWork
+                                                    upgrade
                                                         ? "bg-red-500"
                                                         : "bg-green-500"
                                                 }`}
-                                                onClick={handleManageWork}
+                                                onClick={handleUpgrade}
                                             >
-                                                Manage Work
-                                            </button>
-                                            <button
-                                                className={`text-white font-bold py-2 px-4 rounded w-full ${
-                                                    buyAugs
-                                                        ? "bg-red-500"
-                                                        : "bg-green-500"
-                                                }`}
-                                                onClick={handleBuyAugs}
-                                            >
-                                                Buy Augs
+                                                Upgrade Servers
                                             </button>
                                         </div>
                                     </div>

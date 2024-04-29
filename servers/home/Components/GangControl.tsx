@@ -39,8 +39,8 @@ export const GangControl = ({ ns }: IGangControlProps) => {
         let newGangPid = gangPid;
         let newEnabled = enabled;
         if (newEnabled === true) {
-            ns.scriptKill("CD/Tools/Gangs/Gangs.js", "home");
-            newGangPid = ns.exec("CD/Tools/Gangs/Gangs.js", "home");
+            ns.scriptKill("Tools/Gangs/Gangs.js", "home");
+            newGangPid = ns.exec("Tools/Gangs/Gangs.js", "home");
             if (newGangPid <= 0) {
                 ns.print("Failed to run Gangs script");
                 console.log("Failed to run gang script");
@@ -49,7 +49,7 @@ export const GangControl = ({ ns }: IGangControlProps) => {
             }
         } else {
             if (gangPid !== 0) {
-                ns.kill("CD/Tools/Gangs/Gangs.js", "home");
+                ns.kill("Tools/Gangs/Gangs.js", "home");
                 newGangPid = -1;
                 newEnabled = false;
             }

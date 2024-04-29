@@ -1,9 +1,10 @@
 import { NetscriptPort } from "NetscriptDefinitions";
 import { COSTS, SCRIPTS, WORKERS } from "./BatchTool/Constants";
+import { BATCHPORT, HACKPORT } from "../../Constants";
+import { HackInfo, HackStage } from "../../types";
 
 export class BatchHack {
     private ns: NS;
-    private hackScript: string = "ShareHack.js";
     private servers: string[] = [];
     private target: string;
     private toolCount: number = -1;
@@ -14,7 +15,7 @@ export class BatchHack {
     private serverIndex: number = 0;
     private prepTime: number = 0;
     private checkTime: number = 0;
-    private runTime: number = 900000;
+    private runTime: number = 1800000;
     private totalPrepTime: number = 0;
     private prepThreadsLeft: number = 0;
     private prepServers: number = 0;
@@ -28,29 +29,39 @@ export class BatchHack {
     private maxMoney;
     private hackChance;
     private firstRun = true;
-    private lastOptimize = Date.now();
 
     constructor(ns: NS, target: string = "joesguns") {
         this.ns = ns;
         this.target = target;
-        this.dataPort = this.ns.getPortHandle(this.ns.pid);
+        this.dataPort = this.ns.getPortHandle(BATCHPORT);
         this.maxMoney = this.ns.getServerMaxMoney(this.target);
     }
 
     private getServers = (
         lambdaCondition = (hostname: string) => true,
+        includeHacknet = false,
         hostname = "home",
         toolCount = 0,
         servers: string[] = [],
         visited: string[] = []
     ) => {
+        if (hostname.startsWith("hacknet") && !includeHacknet) {
+            return;
+        }
         if (visited.includes(hostname)) return;
         visited.push(hostname);
         if (lambdaCondition(hostname)) servers.push(hostname);
         const connectedNodes = this.ns.scan(hostname);
         if (hostname !== "home") connectedNodes.shift();
         for (const node of connectedNodes)
-            this.getServers(lambdaCondition, node, toolCount, servers, visited);
+            this.getServers(
+                lambdaCondition,
+                includeHacknet,
+                node,
+                toolCount,
+                servers,
+                visited
+            );
         return servers;
     };
 
@@ -69,7 +80,7 @@ export class BatchHack {
         }
     };
 
-    private checkTarget = (server: string, target: string, forms = false) => {
+    private checkTarget = (server: string, target: string) => {
         if (!this.ns.hasRootAccess(server)) return target;
 
         const player = this.ns.getPlayer();
@@ -79,43 +90,19 @@ export class BatchHack {
         let previousScore;
         let currentScore;
 
-        if (
-            serverSim.requiredHackingSkill <=
-            player.skills.hacking / (forms ? 1 : 2)
-        ) {
-            if (forms) {
-                serverSim.hackDifficulty = serverSim.minDifficulty;
-                pSim.hackDifficulty = pSim.minDifficulty;
+        if (serverSim.requiredHackingSkill <= player.skills.hacking) {
+            serverSim.hackDifficulty = serverSim.minDifficulty;
+            pSim.hackDifficulty = pSim.minDifficulty;
 
-                previousScore =
-                    (pSim.moneyMax /
-                        this.ns.formulas.hacking.weakenTime(pSim, player)) *
-                    this.ns.formulas.hacking.hackChance(pSim, player);
-                currentScore =
-                    (serverSim.moneyMax /
-                        this.ns.formulas.hacking.weakenTime(
-                            serverSim,
-                            player
-                        )) *
-                    this.ns.formulas.hacking.hackChance(serverSim, player);
-            } else {
-                const weight = (serv) => {
-                    // Calculate the difference between max and available money
-                    let diff = serv.moneyMax - serv.moneyAvailable;
+            previousScore =
+                (pSim.moneyMax /
+                    this.ns.formulas.hacking.weakenTime(pSim, player)) *
+                this.ns.formulas.hacking.hackChance(pSim, player);
+            currentScore =
+                (serverSim.moneyMax /
+                    this.ns.formulas.hacking.weakenTime(serverSim, player)) *
+                this.ns.formulas.hacking.hackChance(serverSim, player);
 
-                    // Calculate the scaling factor as the ratio of the difference to the max money
-                    // The constant here is just an adjustment to fine tune the influence of the scaling factor
-                    let scalingFactor = (diff / serv.moneyMax) * 0.95;
-
-                    // Adjust the weight based on the difference, applying the scaling penalty
-                    return (
-                        (serv.moneyMax / serv.minDifficulty) *
-                        (1 - scalingFactor)
-                    );
-                };
-                previousScore = weight(pSim);
-                currentScore = weight(serverSim);
-            }
             if (currentScore > previousScore) target = server;
         }
         return target;
@@ -166,17 +153,19 @@ export class BatchHack {
     };
 
     private hackServers = () => {
+        const hackInfo: HackInfo = JSON.parse(this.ns.peek(HACKPORT));
         this.servers = this.getServers(
             (server) => {
-                if (server === "home") return false;
-                this.target = this.checkTarget(server, this.target, true);
+                if (server === "home") return true;
+                this.target = this.checkTarget(server, this.target);
                 this.copyScripts(server, WORKERS, true);
                 this.nukeTarget(server);
                 return this.ns.hasRootAccess(server);
             },
+            hackInfo.IncludeNet,
             "home",
             this.toolCount,
-            ["home"]
+            []
         );
     };
 
@@ -263,7 +252,7 @@ export class BatchHack {
                     },
                     this.target,
                     0,
-                    this.ns.pid,
+                    BATCHPORT,
                     report
                 );
                 if (!w1Pid)
@@ -286,7 +275,7 @@ export class BatchHack {
                     },
                     this.target,
                     wTime + 5 - gTime,
-                    this.ns.pid,
+                    BATCHPORT,
                     report
                 );
                 if (!gPid) throw new Error("Failed to start grow threads");
@@ -308,7 +297,7 @@ export class BatchHack {
                     },
                     this.target,
                     10,
-                    this.ns.pid,
+                    BATCHPORT,
                     report
                 );
                 if (!w2Pid)
@@ -407,7 +396,11 @@ export class BatchHack {
         );
 
         if (Math.max(hThreads, gThreads) <= maxThreads) {
-            const batchCount = this.testThreads("pserver-0");
+            let batchCount = 0;
+            this.servers.forEach((server) => {
+                batchCount += this.testThreads(server);
+            });
+
             const income =
                 (tGreed * maxMoney * batchCount) / (5 * 4 * batchCount + wTime);
             if (income > this.best) {
@@ -416,12 +409,6 @@ export class BatchHack {
             }
         }
         this.greedStep -= stepValue;
-        this.ns.print(
-            `Optimizing Greed: ${this.ns.formatNumber(
-                this.greedStep,
-                2
-            )} / \$${this.ns.formatNumber(this.best, 2)}`
-        );
         if (this.greedStep <= 0) {
             if (this.best <= 0) {
                 this.clearHack();
@@ -429,7 +416,6 @@ export class BatchHack {
             } else {
                 this.isOptimizing = false;
                 this.isOptimized = true;
-                this.lastOptimize = Date.now() + this.runTime;
                 this.error = "";
             }
         }
@@ -471,49 +457,62 @@ export class BatchHack {
         let batchCount = Math.floor(availRam / totalCost);
         if (batchCount > 0) {
             this.hackingServers++;
+        } else {
+            console.log(`No batches for ${server}`);
         }
         while (batchCount > 0) {
             batchCount--;
             const report = batchCount === 0;
-            this.ns.exec(
+            const hpid = this.ns.exec(
                 SCRIPTS.hack,
                 server,
                 { threads: hThreads, temporary: true },
                 this.target,
                 wTime - 5 - hTime,
-                this.ns.pid,
+                BATCHPORT,
                 false
             );
-
-            this.ns.exec(
+            if (hpid <= 0) {
+                console.log(`Failed to launch hack`);
+            }
+            const w1pid = this.ns.exec(
                 SCRIPTS.weaken1,
                 server,
                 { threads: wThreads1, temporary: true },
                 this.target,
                 0,
-                this.ns.pid,
+                BATCHPORT,
                 false
             );
+            if (w1pid <= 0) {
+                console.log(`Failed to launch w1`);
+            }
 
-            this.ns.exec(
+            const gpid = this.ns.exec(
                 SCRIPTS.grow,
                 server,
                 { threads: gThreads, temporary: true },
                 this.target,
                 wTime + 5 - gTime,
-                this.ns.pid,
+                BATCHPORT,
                 false
             );
+            if (gpid <= 0) {
+                console.log(`Failed to launch grow`);
+            }
 
-            this.ns.exec(
+            const w2pid = this.ns.exec(
                 SCRIPTS.weaken2,
                 server,
                 { threads: wThreads2, temporary: true },
                 this.target,
                 10,
-                this.ns.pid,
+                BATCHPORT,
                 report
             );
+            if (w2pid <= 0) {
+                console.log(`Failed to launch w2`);
+            }
         }
     };
 
@@ -524,6 +523,7 @@ export class BatchHack {
         }
         const server = this.servers[this.serverIndex];
         this.serverIndex++;
+        console.log(`Batching ${server}`);
         this.runBatch(server);
     };
 
@@ -533,24 +533,6 @@ export class BatchHack {
         this.startingBatch = true;
         this.startBatch();
     };
-
-    private formatTime(miliseconds) {
-        let minutes = 0;
-        let seconds = 0;
-        if (miliseconds > 60000) {
-            minutes = Math.floor(miliseconds / 60000);
-            miliseconds = miliseconds - minutes * 60000;
-        }
-        if (miliseconds > 1000) {
-            seconds = Math.floor(miliseconds / 1000);
-        }
-        let outputstring = "";
-        if (minutes > 0) {
-            outputstring += `${minutes} minutes and `;
-        }
-        outputstring += `${seconds} seconds`;
-        return outputstring;
-    }
 
     clearHack = () => {
         this.isBatching = false;
@@ -571,7 +553,7 @@ export class BatchHack {
         this.hackChance = this.ns.hackAnalyzeChance(this.target);
         this.maxMoney = this.ns.getServerMaxMoney(this.target);
         if (this.error !== undefined && this.error !== "") {
-            this.ns.print(this.error);
+            console.log(this.error);
         } else {
             if (
                 (!this.isPrepping &&
@@ -590,7 +572,7 @@ export class BatchHack {
                 }
                 let newTarget = this.target;
                 this.servers.forEach((server) => {
-                    newTarget = this.checkTarget(server, this.target, true);
+                    newTarget = this.checkTarget(server, this.target);
                 });
                 if (newTarget !== this.target) {
                     restartHack = true;
@@ -603,17 +585,12 @@ export class BatchHack {
                     this.hackServers();
                 } else {
                     if (!this.isPrepped()) {
-                        this.killall();
-                        this.clearHack();
                         this.prepServer();
-                    } else if (
-                        !this.isOptimized ||
-                        (this.firstRun === false &&
-                            this.lastOptimize < Date.now())
-                    ) {
+                    } else if (!this.isOptimized || this.firstRun === false) {
                         this.isOptimized = false;
                         this.greedStep = 99;
                         this.greed = 0;
+                        this.checkTime = Date.now() + this.runTime;
                         this.startOptimizing();
                     } else if (!this.isBatching) {
                         this.firstRun = false;
@@ -628,15 +605,12 @@ export class BatchHack {
                     this.checkTime = this.prepTime + Date.now();
                     while (!this.dataPort.empty()) {
                         const info = this.dataPort.read();
-                        console.log(info);
                         if (
                             info.startsWith("weaken") ||
                             info.startsWith("grow")
                         ) {
                             this.prepServers--;
-                            console.log(this.prepServers);
                             if (this.prepServers <= 0) {
-                                console.log("starting over");
                                 this.isPrepping = false;
                             }
                         }
@@ -646,7 +620,7 @@ export class BatchHack {
                 } else if (this.startingBatch) {
                     this.startBatch();
                 } else if (this.isBatching) {
-                    while (!this.dataPort.empty()) {
+                    if (!this.dataPort.empty()) {
                         const info = this.dataPort.read() as string;
                         const [type, server] = info.split(":");
                         if (type === "weaken") {
@@ -655,77 +629,31 @@ export class BatchHack {
                         }
                     }
                 }
-
-                if (this.isPrepping) {
-                    this.ns.print(
-                        `Prepping for ${this.formatTime(
-                            this.prepTime - Date.now()
-                        )} ${
-                            this.prepThreadsLeft > 0
-                                ? `${this.prepThreadsLeft} threads left`
-                                : ""
-                        }`
-                    );
-                    if (this.prepThreadsLeft > 0) {
-                        this.ns.print(
-                            `Total Prep Time: ${this.formatTime(
-                                this.totalPrepTime - Date.now()
-                            )}`
-                        );
-                    }
-                }
             }
-            this.ns.print(
-                `Progresss: ${
-                    this.isPrepping
-                        ? "Prepping"
-                        : `${
-                              this.isOptimizing
-                                  ? "Optimizing"
-                                  : `${
-                                        this.isBatching ? "Batching" : "Unknown"
-                                    }`
-                          }`
-                }`
-            );
-            if (this.isBatching) {
-                this.ns.print(
-                    `Chance: ${this.ns.formatNumber(
-                        this.hackChance,
-                        2
-                    )}    Greed: ${this.ns.formatNumber(this.greed, 3)}`
-                );
-                this.ns.print(
-                    `Reset: ${this.formatTime(this.checkTime - Date.now())}`
-                );
-            }
-            this.ns.print(
-                `Server Count: ${
-                    this.isPrepping ? this.prepServers : this.hackingServers
-                }    Target: ${this.target}`
-            );
-            const security = this.ns.getServerSecurityLevel(this.target);
-            const minSec = this.ns.getServerMinSecurityLevel(this.target);
-            const money = this.ns.getServerMoneyAvailable(this.target);
-            const maxMoney = this.ns.getServerMaxMoney(this.target);
-            this.ns.print(
-                `Stats: ${this.ns.formatNumber(
-                    security,
-                    2
-                )} / ${this.ns.formatNumber(
-                    minSec,
-                    2
-                )} \$${this.ns.formatNumber(
-                    money,
-                    2
-                )} / \$${this.ns.formatNumber(maxMoney, 2)}`
-            );
-            this.ns.print(`Current Tool Count: ${this.toolCount}`);
         }
-        if (this.isOptimizing || this.startingBatch) {
-            await this.ns.sleep(5);
-        } else {
-            await this.ns.sleep(1000);
+        const hackInfo: HackInfo = JSON.parse(this.ns.peek(HACKPORT));
+        if (this.isPrepping) {
+            hackInfo.Stage = HackStage.Prepping;
+            hackInfo.Count = this.prepServers;
+        } else if (this.isOptimizing) {
+            hackInfo.Stage = HackStage.Optimizing;
+        } else if (this.isBatching) {
+            hackInfo.Stage = HackStage.Batching;
+            hackInfo.Count = this.hackingServers;
         }
+        hackInfo.Greed = this.greed;
+        hackInfo.GreedStep = this.greedStep;
+        hackInfo.Best = this.best;
+        hackInfo.Chance = this.hackChance;
+        hackInfo.Error = this.error;
+        hackInfo.Prep = this.prepTime;
+        hackInfo.TotalPrep =
+            this.prepThreadsLeft > 0 ? this.totalPrepTime : undefined;
+        hackInfo.Tools = this.toolCount;
+        hackInfo.Target = this.target;
+        hackInfo.Reset = this.checkTime;
+        this.ns.clearPort(HACKPORT);
+        this.ns.writePort(HACKPORT, JSON.stringify(hackInfo));
+        await this.ns.sleep(5);
     };
 }

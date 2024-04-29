@@ -1,3 +1,6 @@
+import { HACKPORT } from "../../Constants";
+import { HackInfo } from "../../types";
+
 export class BasicHack {
     private ns: NS;
     private hackScript: string = "baseHack.js";
@@ -64,59 +67,9 @@ export class BasicHack {
                 this.ns.brutessh(server);
             }
             this.ns.nuke(server);
+            return true;
         }
-    };
-
-    private checkTarget = (server: string, target: string, forms = false) => {
-        if (!this.ns.hasRootAccess(server)) return target;
-
-        const player = this.ns.getPlayer();
-        const serverSim = this.ns.getServer(server);
-        const pSim = this.ns.getServer(target);
-
-        let previousScore;
-        let currentScore;
-
-        if (
-            serverSim.requiredHackingSkill <=
-            player.skills.hacking / (forms ? 1 : 2)
-        ) {
-            if (forms) {
-                serverSim.hackDifficulty = serverSim.minDifficulty;
-                pSim.hackDifficulty = pSim.minDifficulty;
-
-                previousScore =
-                    (pSim.moneyMax /
-                        this.ns.formulas.hacking.weakenTime(pSim, player)) *
-                    this.ns.formulas.hacking.hackChance(pSim, player);
-                currentScore =
-                    (serverSim.moneyMax /
-                        this.ns.formulas.hacking.weakenTime(
-                            serverSim,
-                            player
-                        )) *
-                    this.ns.formulas.hacking.hackChance(serverSim, player);
-            } else {
-                const weight = (serv) => {
-                    // Calculate the difference between max and available money
-                    let diff = serv.moneyMax - serv.moneyAvailable;
-
-                    // Calculate the scaling factor as the ratio of the difference to the max money
-                    // The constant here is just an adjustment to fine tune the influence of the scaling factor
-                    let scalingFactor = (diff / serv.moneyMax) * 0.95;
-
-                    // Adjust the weight based on the difference, applying the scaling penalty
-                    return (
-                        (serv.moneyMax / serv.minDifficulty) *
-                        (1 - scalingFactor)
-                    );
-                };
-                previousScore = weight(pSim);
-                currentScore = weight(serverSim);
-            }
-            if (currentScore > previousScore) target = server;
-        }
-        return target;
+        return false;
     };
 
     private getToolCount = () => {
@@ -140,47 +93,24 @@ export class BasicHack {
     };
 
     private hackServers = () => {
-        this.servers = this.getServers(
-            (server) => {
-                if (server === "home") return false;
-                //this.target = this.checkTarget(server, this.target, true);
-                this.copyScripts(server, [this.hackScript], true);
-                this.nukeTarget(server);
-                return this.ns.hasRootAccess(server);
-            },
-            "home",
-            ["home"]
-        );
+        this.servers = this.getServers((server) => {
+            if (server === "home") return false;
+            //this.target = this.checkTarget(server, this.target, true);
+            this.copyScripts(server, [this.hackScript], true);
+            this.nukeTarget(server);
+            const hasRootAccess = this.ns.hasRootAccess(server);
+            return hasRootAccess;
+        });
     };
 
     private runJobs = () => {
         this.servers.forEach((server) => {
-            const numPorts = this.ns.getServerNumPortsRequired(server);
-            const isPrivate = server.startsWith("pserv");
-            if (numPorts <= this.toolCount || isPrivate) {
-                if (numPorts >= 1 && !isPrivate) {
-                    this.ns.brutessh(server);
-                }
-                if (numPorts >= 2 && !isPrivate) {
-                    this.ns.ftpcrack(server);
-                }
-                if (numPorts >= 3 && !isPrivate) {
-                    this.ns.relaysmtp(server);
-                }
-                if (numPorts >= 4 && !isPrivate) {
-                    this.ns.httpworm(server);
-                }
-                if (numPorts >= 5 && !isPrivate) {
-                    this.ns.sqlinject(server);
-                }
-                const maxRam = this.ns.getServerMaxRam(server);
-                const used = this.ns.getServerUsedRam(server);
-                const threads = Math.floor((maxRam - used) / this.scriptMem);
-                if (threads > 0) {
-                    this.ns.nuke(server);
-                    this.ns.scp(this.hackScript, server);
-                    this.ns.exec(this.hackScript, server, threads, this.target);
-                }
+            if (!this.ns.hasRootAccess(server)) return;
+            const maxRam = this.ns.getServerMaxRam(server);
+            const used = this.ns.getServerUsedRam(server);
+            const threads = Math.floor((maxRam - used) / this.scriptMem);
+            if (threads > 0) {
+                this.ns.exec(this.hackScript, server, threads, this.target);
             }
         });
     };
@@ -190,6 +120,7 @@ export class BasicHack {
         });
     };
     processHack = async () => {
+        const hackInfo: HackInfo = JSON.parse(this.ns.peek(HACKPORT));
         const oldTools = this.toolCount;
         this.toolCount = this.getToolCount();
         if (this.toolCount > oldTools) {
@@ -197,26 +128,12 @@ export class BasicHack {
             this.hackServers();
             this.runJobs();
         }
-        this.ns.print(
-            `Server Count: ${this.servers.length}    Target: ${this.target}`
-        );
-        const security = this.ns.getServerSecurityLevel(this.target);
-        const money = this.ns.getServerMoneyAvailable(this.target);
-        const minSec = this.ns.getServerMinSecurityLevel(this.target);
-        const maxMoney = this.ns.getServerMaxMoney(this.target);
-        this.ns.print(
-            `Security: ${this.ns.formatNumber(
-                security,
-                1
-            )} / ${this.ns.formatNumber(
-                minSec,
-                1
-            )} Money: \$${this.ns.formatNumber(
-                money,
-                2
-            )} / \$${this.ns.formatNumber(maxMoney, 2)}`
-        );
-        this.ns.print(`Current Tool Count: ${this.toolCount}`);
+        hackInfo.Tools = this.toolCount;
+        hackInfo.Count = this.servers.length;
+        hackInfo.Target = this.target;
+        this.ns.clearPort(HACKPORT);
+        this.ns.writePort(HACKPORT, JSON.stringify(hackInfo));
+
         await this.ns.sleep(1000);
     };
 }

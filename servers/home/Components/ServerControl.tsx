@@ -48,9 +48,9 @@ export const ServerControl = ({ ns }: IServerControlProps) => {
         let newServerPid = serverPid;
         let newEnabled = enabled;
         if (newEnabled === true) {
-            ns.scriptKill("CD/Tools/ServerManager/ServerManager.js", "home");
+            ns.scriptKill("Tools/ServerManager/ServerManager.js", "home");
             newServerPid = ns.exec(
-                "CD/Tools/ServerManager/ServerManager.js",
+                "Tools/ServerManager/ServerManager.js",
                 "home"
             );
             if (newServerPid === 0) {
@@ -61,7 +61,7 @@ export const ServerControl = ({ ns }: IServerControlProps) => {
             }
         } else {
             if (serverPid !== 0) {
-                ns.kill("CD/Tools/ServerManager/ServerManager.js", "home");
+                ns.kill("Tools/ServerManager/ServerManager.js", "home");
                 newServerPid = -1;
                 newEnabled = false;
             }
