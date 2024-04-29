@@ -1,3 +1,6 @@
+import { HACKPORT } from "../../Constants";
+import { HackInfo } from "../../types";
+
 export class ShareHack {
     private ns: NS;
     private hackScript: string = "ShareHack.js";
@@ -87,17 +90,14 @@ export class ShareHack {
     };
 
     private hackServers = () => {
-        this.servers = this.getServers(
-            (server) => {
-                if (server === "home") return false;
-                this.copyScripts(server, [this.hackScript], true);
-                this.nukeTarget(server);
-                return this.ns.hasRootAccess(server);
-            },
-            "home",
-            this.toolCount,
-            ["home"]
-        );
+        this.servers = this.getServers((server) => {
+            if (server === "home") return false;
+            //this.target = this.checkTarget(server, this.target, true);
+            this.copyScripts(server, [this.hackScript], true);
+            this.nukeTarget(server);
+            const hasRootAccess = this.ns.hasRootAccess(server);
+            return hasRootAccess;
+        });
     };
 
     private runJobs = () => {
@@ -136,6 +136,7 @@ export class ShareHack {
         });
     };
     processHack = async () => {
+        const hackInfo: HackInfo = JSON.parse(this.ns.peek(HACKPORT));
         const oldTools = this.toolCount;
         this.toolCount = this.getToolCount();
         if (this.toolCount > oldTools) {
@@ -143,11 +144,12 @@ export class ShareHack {
             this.hackServers();
             this.runJobs();
         }
-        this.ns.print(`Share Powre: ${this.ns.getSharePower()}`);
-        this.ns.print(
-            `Server Count: ${this.servers.length}    Target: ${this.target}`
-        );
-        this.ns.print(`Current Tool Count: ${this.toolCount}`);
+        hackInfo.Tools = this.toolCount;
+        hackInfo.Count = this.servers.length;
+        hackInfo.Target = this.target;
+        this.ns.clearPort(HACKPORT);
+        this.ns.writePort(HACKPORT, JSON.stringify(hackInfo));
+
         await this.ns.sleep(1000);
     };
 }

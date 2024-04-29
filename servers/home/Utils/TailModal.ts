@@ -45,36 +45,31 @@ export class TailModal {
             containerEl.style.fontFamily =
                 '"Lucida Console", "Lucida Sans Unicode", "Fira Mono", Consolas, "Courier New", Courier, monospace, "Times New Roman"';
             containerEl.style.fontWeight = "400";
-            containerEl.style.left = "0";
-            containerEl.style.right = "0";
-            containerEl.style.top = "34px";
-            containerEl.style.bottom = "0";
             containerEl.style.background = "black";
             containerEl.style.color = "rgb(0, 204, 0)";
-            containerEl.style.top = "40px";
-            containerEl.style.overflow = "hidden";
-            containerEl.style.height = "fit-content";
-            containerEl.style.position = "fixed";
+            containerEl.style.border = "1px solid rgb(68,68,68)";
             const contentEl = modalEl.firstElementChild
                 .nextElementSibling as HTMLElement;
-            modalEl.firstElementChild
-                .querySelector("span")
-                ?.firstElementChild.remove();
-            modalEl.firstElementChild
-                .querySelector("span")
-                ?.lastElementChild.remove();
             modalEl.firstElementChild.querySelector("h6").title = title;
             modalEl.firstElementChild.querySelector("h6").innerText = title;
-            let found = false;
             modalEl.querySelectorAll("span").forEach((span) => {
-                if (span.style.position === "absolute" && found === false) {
-                    span.remove();
-                    found = true;
-                }
+                span.remove();
             });
-            modalEl.style.height = `${height}px`;
-            const firstChild = contentEl.firstChild;
-            contentEl.insertBefore(containerEl, firstChild);
+            modalEl.style.height = `100vh`;
+            modalEl.style.width = "350px";
+            modalEl.className = "";
+            const index =
+                modalEl.parentElement.className.indexOf("react-draggable");
+            modalEl.parentElement.className =
+                modalEl.parentElement.className.substring(index + 15);
+            modalEl.parentElement.style.transform = "";
+            modalEl.parentElement.style.display = "contents";
+            modalEl.parentElement.style.right = "0";
+            const terminal = modalEl.lastChild.firstChild.parentElement;
+            terminal.style.height = `calc(100% - 216px)`;
+            terminal.style.display = "";
+
+            contentEl.parentElement.insertBefore(containerEl, contentEl);
         }
         return containerEl;
     };

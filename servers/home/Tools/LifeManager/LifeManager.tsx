@@ -50,6 +50,7 @@ export async function main(ns: NS) {
             ) {
                 const serverInfo: ServerInfo = JSON.parse(ns.peek(SERVERPORT));
                 if (
+                    ns.getPurchasedServerLimit() <= 0 ||
                     serverInfo.CurrentSize >= 128 ||
                     (serverInfo.CurrentSize === 128 &&
                         serverInfo.AtRam === serverInfo.Max)
@@ -64,7 +65,7 @@ export async function main(ns: NS) {
             // checking if i need to join a faction or change faction i work for
             let [newFaction, AugToInstall] = findFactionForWork();
             faction = newFaction;
-            if (faction === undefined) {
+            if (faction === undefined || faction === "") {
                 lifeStage = LifeStages.Crime;
             } else {
                 if (action.type !== "FACTION") {
@@ -78,6 +79,17 @@ export async function main(ns: NS) {
                         ) {
                             ns.singularity.workForFaction(faction, "security");
                         }
+                    }
+                }
+                if (ns.singularity.getFactionFavor(faction) >= 150) {
+                    const repPer1000 = ns.formulas.reputation.repFromDonation(
+                        1000,
+                        ns.getPlayer()
+                    );
+                    const donateAmount =
+                        (MyFactionList[faction].rep / repPer1000) * 1000 + 100;
+                    if (ns.getServerMoneyAvailable("home") > donateAmount) {
+                        ns.singularity.donateToFaction(faction, donateAmount);
                     }
                 }
             }
@@ -125,8 +137,10 @@ export async function main(ns: NS) {
             nfgCount = 0;
         }
         if (
+            outFaction !== "" &&
+            outFaction !== undefined &&
             ns.singularity.getFactionRep(outFaction) >
-            MyFactionList[outFaction].rep
+                MyFactionList[outFaction].rep
         ) {
             outFaction = undefined;
             outAug = undefined;
@@ -182,7 +196,11 @@ export async function main(ns: NS) {
         const installedAugs = ns.singularity.getOwnedAugmentations();
         const allAugs = ns.singularity.getOwnedAugmentations(true);
         const waitingAugs = allAugs.length - installedAugs.length;
-        if (waitingAugs >= 10) {
+        let factionRep = 0;
+        if (faction !== undefined && faction !== "") {
+            factionRep = ns.singularity.getFactionRep(faction);
+        }
+        if ((factionRep > 500000 && waitingAugs > 0) || waitingAugs >= 10) {
             ns.singularity.installAugmentations();
         } else {
             const [newFaction, AugToInstall] = findFactionForAugs();
@@ -267,7 +285,6 @@ export async function main(ns: NS) {
                 toolCount = 8;
             }
         }
-        console.log(toolCount);
 
         // Join a gang if we can and if we enabled it
         if (
@@ -323,11 +340,26 @@ export async function main(ns: NS) {
             }
         }
 
+        const allAugs = ns.singularity.getOwnedAugmentations();
+        if (allAugs.includes("The Red Pill")) {
+            const server = ns.getServer("w0r1d_d43m0n");
+            if (server.requiredHackingSkill < ns.getPlayer().skills.hacking) {
+                const path = findServerPath(ns, "w0r1d_d43m0n");
+                path.forEach((con) => {
+                    ns.singularity.connect(con);
+                });
+                await ns.singularity.installBackdoor();
+            }
+        }
+
         // This is to updated our reporting threads.
         const action = ns.singularity.getCurrentWork();
         lifeInfo.Action = action !== null ? actionToString(action) : undefined;
         lifeInfo.Stage = lifeStage;
         lifeInfo.Faction = faction;
+        const ownedAugs = ns.singularity.getOwnedAugmentations(false).length;
+        const purchased = allAugs.length - ownedAugs;
+        lifeInfo.ownedAugs = purchased;
         ns.clearPort(LIFEPORT);
         ns.writePort(LIFEPORT, JSON.stringify(lifeInfo));
         await ns.asleep(1000);

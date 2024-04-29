@@ -47,6 +47,7 @@ export interface HackInfo {
     Tools: number;
     Enabled: boolean;
     Error: string;
+    IncludeNet: boolean;
 }
 
 export interface GangInfo {
@@ -67,4 +68,13 @@ export interface LifeInfo {
     JoinGang: boolean;
     ManageWork: boolean;
     BuyAugs: boolean;
+    ownedAugs: number;
+}
+
+export interface HacknetInfo {
+    Enabled: boolean;
+    Buy: boolean;
+    Upgrade: boolean;
+    minRam: number;
+    maxRam: number;
 }

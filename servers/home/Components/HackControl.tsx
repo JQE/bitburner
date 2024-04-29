@@ -13,6 +13,7 @@ export const HackControl = ({ ns }: IHackControlProps) => {
     const [loading, setLoading] = useState(false);
     const [hackPid, setHackPid] = useState(-1);
     const [hackType, setHackType] = useState<HackType>(HackType.Basic);
+    const [includeNet, setIncludeNet] = useState(false);
     useEffect(() => {
         const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
         setHackType(hackInfo.Type);
@@ -26,13 +27,17 @@ export const HackControl = ({ ns }: IHackControlProps) => {
         setHackType(selection);
     };
 
+    const handleIncludeNet = () => {
+        setIncludeNet(!includeNet);
+    };
+
     const onSave = () => {
         setLoading(true);
         let newHackPid = hackPid;
         let newEnabled = enabled;
         if (newEnabled === true) {
-            ns.scriptKill("CD/Tools/HackManager/HackManager.js", "home");
-            newHackPid = ns.exec("CD/Tools/HackManager/HackManager.js", "home");
+            ns.scriptKill("Tools/HackManager/HackManager.js", "home");
+            newHackPid = ns.exec("Tools/HackManager/HackManager.js", "home");
             if (newHackPid === 0) {
                 ns.print("Failed to run Hack script");
                 console.log("Failed to run Hack script");
@@ -41,7 +46,7 @@ export const HackControl = ({ ns }: IHackControlProps) => {
             }
         } else {
             if (hackPid !== 0) {
-                ns.kill("CD/Tools/HackManager/HackManager.js", "home");
+                ns.kill("Tools/HackManager/HackManager.js", "home");
                 newHackPid = -1;
                 newEnabled = false;
             }
@@ -51,6 +56,7 @@ export const HackControl = ({ ns }: IHackControlProps) => {
         const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
         hackInfo.Enabled = newEnabled;
         hackInfo.Type = hackType;
+        hackInfo.IncludeNet = includeNet;
         ns.clearPort(HACKPORT);
         ns.writePort(HACKPORT, JSON.stringify(hackInfo));
         setShowModal(false);
@@ -108,6 +114,16 @@ export const HackControl = ({ ns }: IHackControlProps) => {
                                                 onClick={handleEnabled}
                                             >
                                                 Enable Hacking
+                                            </button>
+                                            <button
+                                                className={`text-white font-bold py-2 px-4 rounded w-full ${
+                                                    includeNet
+                                                        ? "bg-red-500"
+                                                        : "bg-green-500"
+                                                }`}
+                                                onClick={handleIncludeNet}
+                                            >
+                                                Include Hacknet
                                             </button>
                                             <div>
                                                 <div className="inline-flex">
