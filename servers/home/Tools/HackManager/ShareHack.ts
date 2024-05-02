@@ -7,6 +7,7 @@ export class ShareHack {
     private servers: string[] = [];
     private target: string;
     private toolCount: number = -1;
+    private includeHacknet = false;
 
     constructor(ns: NS, target: string = "joesguns") {
         this.ns = ns;
@@ -15,6 +16,7 @@ export class ShareHack {
 
     private getServers = (
         lambdaCondition = (hostname: string) => true,
+        includeHacknet = false,
         hostname = "home",
         toolCount = 0,
         servers: string[] = [],
@@ -22,11 +24,19 @@ export class ShareHack {
     ) => {
         if (visited.includes(hostname)) return;
         visited.push(hostname);
+        if (hostname.startsWith("hacknet") && !includeHacknet) return;
         if (lambdaCondition(hostname)) servers.push(hostname);
         const connectedNodes = this.ns.scan(hostname);
         if (hostname !== "home") connectedNodes.shift();
         for (const node of connectedNodes)
-            this.getServers(lambdaCondition, node, toolCount, servers, visited);
+            this.getServers(
+                lambdaCondition,
+                includeHacknet,
+                node,
+                toolCount,
+                servers,
+                visited
+            );
         return servers;
     };
 
@@ -97,7 +107,7 @@ export class ShareHack {
             this.nukeTarget(server);
             const hasRootAccess = this.ns.hasRootAccess(server);
             return hasRootAccess;
-        });
+        }, this.includeHacknet);
     };
 
     private runJobs = () => {
@@ -138,6 +148,7 @@ export class ShareHack {
     processHack = async () => {
         const hackInfo: HackInfo = JSON.parse(this.ns.peek(HACKPORT));
         const oldTools = this.toolCount;
+        this.includeHacknet = hackInfo.IncludeNet;
         this.toolCount = this.getToolCount();
         if (this.toolCount > oldTools) {
             this.killall();
