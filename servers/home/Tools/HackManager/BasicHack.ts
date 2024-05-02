@@ -8,6 +8,7 @@ export class BasicHack {
     private servers: string[] = [];
     private target: string;
     private toolCount: number = -1;
+    private includeHacknet = false;
 
     constructor(ns: NS, target: string = "joesguns") {
         this.ns = ns;
@@ -17,17 +18,25 @@ export class BasicHack {
 
     private getServers = (
         lambdaCondition = (hostname: string) => true,
+        includeHacknet = false,
         hostname = "home",
         servers: string[] = [],
         visited: string[] = []
     ) => {
         if (visited.includes(hostname)) return;
         visited.push(hostname);
+        if (!includeHacknet && hostname.startsWith("hacknet")) return;
         if (lambdaCondition(hostname)) servers.push(hostname);
         const connectedNodes = this.ns.scan(hostname);
         if (hostname !== "home") connectedNodes.shift();
         for (const node of connectedNodes)
-            this.getServers(lambdaCondition, node, servers, visited);
+            this.getServers(
+                lambdaCondition,
+                includeHacknet,
+                node,
+                servers,
+                visited
+            );
         return servers;
     };
 
@@ -100,7 +109,7 @@ export class BasicHack {
             this.nukeTarget(server);
             const hasRootAccess = this.ns.hasRootAccess(server);
             return hasRootAccess;
-        });
+        }, this.includeHacknet);
     };
 
     private runJobs = () => {
@@ -122,6 +131,7 @@ export class BasicHack {
     processHack = async () => {
         const hackInfo: HackInfo = JSON.parse(this.ns.peek(HACKPORT));
         const oldTools = this.toolCount;
+        this.includeHacknet = hackInfo.IncludeNet;
         this.toolCount = this.getToolCount();
         if (this.toolCount > oldTools) {
             this.killall();
