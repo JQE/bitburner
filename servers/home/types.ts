@@ -58,6 +58,10 @@ export interface GangInfo {
     Duration: number;
     MemberCount: number;
     BaseRep: number;
+    MoneyGain: number;
+    Respect: number;
+    Power: number;
+    Territory: number;
 }
 
 export interface LifeInfo {
@@ -74,7 +78,13 @@ export interface LifeInfo {
 export interface HacknetInfo {
     Enabled: boolean;
     Buy: boolean;
-    Upgrade: boolean;
+    UpgradeRam: boolean;
+    UpgradeCores: boolean;
+    UpgradeLevel: boolean;
+    UpgradeCache: boolean;
     minRam: number;
     maxRam: number;
+    NumNodes: number;
+    MaxNodes: number;
+    NumHashes: number;
 }
