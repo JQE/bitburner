@@ -177,6 +177,11 @@ export async function main(ns: NS) {
         gangInfo.MemberCount = members.length;
         gangInfo.Duration = duration;
         gangInfo.BaseRep = baseRep;
+        const gang = ns.gang.getGangInformation();
+        gangInfo.MoneyGain = gang.moneyGainRate * 5;
+        gangInfo.Respect = gang.respect;
+        gangInfo.Power = gang.power;
+        gangInfo.Territory = gang.territory;
         ns.clearPort(GANGPORT);
         ns.writePort(GANGPORT, JSON.stringify(gangInfo));
     };

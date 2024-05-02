@@ -10,7 +10,10 @@ export const HacknetControl = ({ ns }: IHacknetControlProps) => {
     const [showModal, setShowModal] = useState(false);
     const [enabled, setEnabled] = useState(false);
     const [buy, setBuy] = useState(false);
-    const [upgrade, setUpgrade] = useState(false);
+    const [upgradeRam, setUpgradeRam] = useState(false);
+    const [upgradeCores, setUpgradeCores] = useState(false);
+    const [upgradeLevel, setUpgradeLevel] = useState(false);
+    const [upgradeCache, setUpgradeCache] = useState(false);
     const [loading, setLoading] = useState(false);
     const [hacknetPid, setHacknetPid] = useState(-1);
 
@@ -20,8 +23,17 @@ export const HacknetControl = ({ ns }: IHacknetControlProps) => {
     const handleBuy = () => {
         setBuy(!buy);
     };
-    const handleUpgrade = () => {
-        setUpgrade(!upgrade);
+    const handleUpgradeRam = () => {
+        setUpgradeRam(!upgradeRam);
+    };
+    const handleUpgradeCores = () => {
+        setUpgradeCores(!upgradeCores);
+    };
+    const handleUpgradeLevel = () => {
+        setUpgradeLevel(!upgradeLevel);
+    };
+    const handleUpgradeCache = () => {
+        setUpgradeCache(!upgradeCache);
     };
 
     const onSave = () => {
@@ -48,7 +60,10 @@ export const HacknetControl = ({ ns }: IHacknetControlProps) => {
         const hacknetInfo: HacknetInfo = JSON.parse(ns.peek(HACKNETPORT));
         hacknetInfo.Enabled = newEnabled;
         hacknetInfo.Buy = buy;
-        hacknetInfo.Upgrade = upgrade;
+        hacknetInfo.UpgradeRam = upgradeRam;
+        hacknetInfo.UpgradeLevel = upgradeLevel;
+        hacknetInfo.UpgradeCores = upgradeCores;
+        hacknetInfo.UpgradeCache = upgradeCache;
         ns.clearPort(HACKNETPORT);
         ns.writePort(HACKNETPORT, JSON.stringify(hacknetInfo));
         setShowModal(false);
@@ -119,13 +134,43 @@ export const HacknetControl = ({ ns }: IHacknetControlProps) => {
                                             </button>
                                             <button
                                                 className={`text-white font-bold py-2 px-4 rounded w-full ${
-                                                    upgrade
+                                                    upgradeRam
                                                         ? "bg-red-500"
                                                         : "bg-green-500"
                                                 }`}
-                                                onClick={handleUpgrade}
+                                                onClick={handleUpgradeRam}
                                             >
-                                                Upgrade Servers
+                                                Upgrade Ram
+                                            </button>
+                                            <button
+                                                className={`text-white font-bold py-2 px-4 rounded w-full ${
+                                                    upgradeLevel
+                                                        ? "bg-red-500"
+                                                        : "bg-green-500"
+                                                }`}
+                                                onClick={handleUpgradeLevel}
+                                            >
+                                                Upgrade Levels
+                                            </button>
+                                            <button
+                                                className={`text-white font-bold py-2 px-4 rounded w-full ${
+                                                    upgradeCores
+                                                        ? "bg-red-500"
+                                                        : "bg-green-500"
+                                                }`}
+                                                onClick={handleUpgradeCores}
+                                            >
+                                                Upgrade Cores
+                                            </button>
+                                            <button
+                                                className={`text-white font-bold py-2 px-4 rounded w-full ${
+                                                    upgradeCache
+                                                        ? "bg-red-500"
+                                                        : "bg-green-500"
+                                                }`}
+                                                onClick={handleUpgradeCache}
+                                            >
+                                                Upgrade Cache
                                             </button>
                                         </div>
                                     </div>

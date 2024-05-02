@@ -102,6 +102,10 @@ export async function main(ns: NS) {
         Duration: 1,
         MemberCount: 0,
         BaseRep: 0,
+        MoneyGain: 0,
+        Respect: 0,
+        Power: 0,
+        Territory: 0,
     };
     ns.clearPort(GANGPORT);
     ns.writePort(GANGPORT, JSON.stringify(defaultGang));
@@ -155,9 +159,15 @@ export async function main(ns: NS) {
     const defaultHacknet: HacknetInfo = {
         Enabled: false,
         Buy: false,
-        Upgrade: false,
+        UpgradeRam: false,
+        UpgradeLevel: false,
+        UpgradeCores: false,
+        UpgradeCache: false,
         minRam: 9999999999999,
         maxRam: 0,
+        NumNodes: 0,
+        NumHashes: 0,
+        MaxNodes: 0,
     };
     ns.clearPort(HACKNETPORT);
     ns.writePort(HACKNETPORT, JSON.stringify(defaultHacknet));
@@ -165,12 +175,11 @@ export async function main(ns: NS) {
     const handleGangLog = () => {
         const gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));
         if (gangInfo.Enabled === true) {
-            const gang = ns.gang.getGangInformation();
             ns.print(`\x1b[35mGang Info`);
             ns.print(`Members: \x1b[36m${gangInfo.MemberCount}`);
             ns.print(
                 `Money: \x1b[36m${ns.formatNumber(
-                    gang.moneyGainRate * gangInfo.Duration,
+                    gangInfo.MoneyGain * gangInfo.Duration,
                     2
                 )}/s`
             );
@@ -179,15 +188,17 @@ export async function main(ns: NS) {
             );
             ns.print(
                 `Rep: \x1b[36m${ns.formatNumber(
-                    gang.respect,
+                    gangInfo.Respect,
                     2
                 )}    \x1b[32mAsc: \x1b[36m${ns.formatNumber(
                     gangInfo.BaseRep,
                     2
                 )}`
             );
-            ns.print(`Power: \x1b[36m${ns.formatNumber(gang.power)}`);
-            ns.print(`Territory: \x1b[36m${ns.formatPercent(gang.territory)}`);
+            ns.print(`Power: \x1b[36m${ns.formatNumber(gangInfo.Power)}`);
+            ns.print(
+                `Territory: \x1b[36m${ns.formatPercent(gangInfo.Territory)}`
+            );
         }
     };
 
@@ -366,10 +377,10 @@ export async function main(ns: NS) {
         if (hacknetInfo.Enabled) {
             ns.print(`\x1b[35mHacknet INfo`);
             ns.print(
-                `Hashes: \x1b[36m${ns.formatNumber(ns.hacknet.numHashes(), 2)}`
+                `Hashes: \x1b[36m${ns.formatNumber(hacknetInfo.NumHashes, 2)}`
             );
             ns.print(
-                `Nodes: \x1b[36m${ns.hacknet.numNodes()} / ${ns.hacknet.maxNumNodes()}`
+                `Nodes: \x1b[36m${hacknetInfo.NumNodes} / ${hacknetInfo.MaxNodes}`
             );
             ns.print(
                 `Ram | Min: \x1b[36m${hacknetInfo.minRam} \x1b[32mMax: \x1b[36m${hacknetInfo.maxRam}`

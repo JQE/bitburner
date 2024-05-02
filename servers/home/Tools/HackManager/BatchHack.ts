@@ -196,7 +196,8 @@ export class BatchHack {
         if (this.isPrepped() || this.isPrepping) return;
         this.isPrepping = true;
 
-        const money = this.ns.getServerMoneyAvailable(this.target);
+        let money = this.ns.getServerMoneyAvailable(this.target);
+        if (money === 0) money = 1;
         const sec = this.ns.getServerSecurityLevel(this.target);
         this.maxMoney = this.ns.getServerMaxMoney(this.target);
         const minSec = this.ns.getServerMinSecurityLevel(this.target);

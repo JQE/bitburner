@@ -17,19 +17,56 @@ export async function main(ns: NS) {
         ) {
             ns.hacknet.purchaseNode();
         }
-        if (hacknetInfo.Upgrade) {
+        if (
+            hacknetInfo.UpgradeRam ||
+            hacknetInfo.UpgradeLevel ||
+            hacknetInfo.UpgradeCores ||
+            hacknetInfo.UpgradeCache
+        ) {
             for (let i = 0; i < ns.hacknet.numNodes(); i++) {
                 const money = ns.getServerMoneyAvailable("home");
-                const levelcost = ns.hacknet.getLevelUpgradeCost(i);
-                if (levelcost < money) {
-                    ns.hacknet.upgradeLevel(i);
-                } else if (ns.hacknet.getRamUpgradeCost(i) < money) {
-                    ns.hacknet.upgradeRam(i);
-                } else if (ns.hacknet.getCoreUpgradeCost(i) < money) {
-                    ns.hacknet.upgradeCore(i);
-                } /* else if (ns.hacknet.getCacheUpgradeCost(i) < money) {
-                    ns.hacknet.upgradeCache(i);
-                }*/
+                if (hacknetInfo.UpgradeRam) {
+                    if (ns.hacknet.getRamUpgradeCost(i) < money) {
+                        let c = 2;
+                        while (ns.hacknet.getRamUpgradeCost(i, c) < money) {
+                            c++;
+                        }
+                        c--;
+                        ns.hacknet.upgradeRam(i, c);
+                    }
+                }
+                if (hacknetInfo.UpgradeLevel) {
+                    if (ns.hacknet.getLevelUpgradeCost(i) < money) {
+                        let c = 2;
+                        while (ns.hacknet.getLevelUpgradeCost(i, c) < money) {
+                            c++;
+                        }
+                        c--;
+                        ns.hacknet.upgradeLevel(i, c);
+                    }
+                }
+
+                if (hacknetInfo.UpgradeCores) {
+                    if (ns.hacknet.getCoreUpgradeCost(i) < money) {
+                        let c = 2;
+                        while (ns.hacknet.getCoreUpgradeCost(i, c) < money) {
+                            c++;
+                        }
+                        c--;
+                        ns.hacknet.upgradeCore(i, c);
+                    }
+                }
+
+                if (hacknetInfo.UpgradeCache) {
+                    if (ns.hacknet.getCacheUpgradeCost(i) < money) {
+                        let c = 2;
+                        while (ns.hacknet.getCacheUpgradeCost(i, c) < money) {
+                            c++;
+                        }
+                        c--;
+                        ns.hacknet.upgradeCache(i, c);
+                    }
+                }
                 const stats = ns.hacknet.getNodeStats(i);
                 let minRam = 99999999999;
                 if (stats.ram < minRam) {
@@ -41,6 +78,10 @@ export async function main(ns: NS) {
                 hacknetInfo.minRam = minRam;
             }
         }
+        hacknetInfo.NumNodes = ns.hacknet.numNodes();
+        hacknetInfo.NumHashes = ns.hacknet.numHashes();
+        hacknetInfo.MaxNodes = ns.hacknet.maxNumNodes();
+
         ns.clearPort(HACKNETPORT);
         ns.writePort(HACKNETPORT, JSON.stringify(hacknetInfo));
         await ns.sleep(1000);
