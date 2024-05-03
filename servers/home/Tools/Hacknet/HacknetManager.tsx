@@ -17,13 +17,14 @@ export async function main(ns: NS) {
         ) {
             ns.hacknet.purchaseNode();
         }
-        if (
-            hacknetInfo.UpgradeRam ||
-            hacknetInfo.UpgradeLevel ||
-            hacknetInfo.UpgradeCores ||
-            hacknetInfo.UpgradeCache
-        ) {
-            for (let i = 0; i < ns.hacknet.numNodes(); i++) {
+
+        for (let i = 0; i < ns.hacknet.numNodes(); i++) {
+            if (
+                hacknetInfo.UpgradeRam ||
+                hacknetInfo.UpgradeLevel ||
+                hacknetInfo.UpgradeCores ||
+                hacknetInfo.UpgradeCache
+            ) {
                 const money = ns.getServerMoneyAvailable("home");
                 if (hacknetInfo.UpgradeRam) {
                     if (ns.hacknet.getRamUpgradeCost(i) < money) {
@@ -67,16 +68,16 @@ export async function main(ns: NS) {
                         ns.hacknet.upgradeCache(i, c);
                     }
                 }
-                const stats = ns.hacknet.getNodeStats(i);
-                let minRam = 99999999999;
-                if (stats.ram < minRam) {
-                    minRam = stats.ram;
-                }
-                if (stats.ram > hacknetInfo.maxRam) {
-                    hacknetInfo.maxRam = stats.ram;
-                }
-                hacknetInfo.minRam = minRam;
             }
+            const stats = ns.hacknet.getNodeStats(i);
+            let minRam = 99999999999;
+            if (stats.ram < minRam) {
+                minRam = stats.ram;
+            }
+            if (stats.ram > hacknetInfo.maxRam) {
+                hacknetInfo.maxRam = stats.ram;
+            }
+            hacknetInfo.minRam = minRam;
         }
         hacknetInfo.NumNodes = ns.hacknet.numNodes();
         hacknetInfo.NumHashes = ns.hacknet.numHashes();
