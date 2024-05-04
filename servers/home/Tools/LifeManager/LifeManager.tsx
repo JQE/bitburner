@@ -1,8 +1,14 @@
 import React from "react";
 import { LifeStages, MyFactionList } from "./types";
 import { NS } from "NetscriptDefinitions";
-import { LifeInfo, ServerInfo } from "../../types";
-import { LIFEPORT, SERVERPORT } from "../../Constants";
+import { LifeInfo, ServerInfo, Settings } from "../../types";
+import {
+    GANGPORT,
+    HACKNETPORT,
+    HACKPORT,
+    LIFEPORT,
+    SERVERPORT,
+} from "../../Constants";
 import { actionToString, findServerPath } from "../../utils";
 
 export async function main(ns: NS) {
@@ -201,7 +207,14 @@ export async function main(ns: NS) {
             factionRep = ns.singularity.getFactionRep(faction);
         }
         if ((factionRep > 500000 && waitingAugs > 0) || waitingAugs >= 10) {
-            ns.singularity.installAugmentations();
+            const settings: Settings = {};
+            settings.Life = JSON.parse(ns.peek(LIFEPORT));
+            settings.Hack = JSON.parse(ns.peek(HACKPORT));
+            settings.Hacknet = JSON.parse(ns.peek(HACKNETPORT));
+            settings.Gang = JSON.parse(ns.peek(GANGPORT));
+            settings.Server = JSON.parse(ns.peek(SERVERPORT));
+            ns.write("settings.txt", JSON.stringify(settings), "w");
+            ns.singularity.installAugmentations("htp.js");
         } else {
             const [newFaction, AugToInstall] = findFactionForAugs();
             const player = ns.getPlayer();
@@ -340,7 +353,7 @@ export async function main(ns: NS) {
             }
         }
 
-        const allAugs = ns.singularity.getOwnedAugmentations();
+        const allAugs = ns.singularity.getOwnedAugmentations(true);
         if (allAugs.includes("The Red Pill")) {
             const server = ns.getServer("w0r1d_d43m0n");
             if (server.requiredHackingSkill < ns.getPlayer().skills.hacking) {
@@ -348,6 +361,7 @@ export async function main(ns: NS) {
                 path.forEach((con) => {
                     ns.singularity.connect(con);
                 });
+
                 await ns.singularity.installBackdoor();
             }
         }
