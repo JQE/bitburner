@@ -88,3 +88,11 @@ export interface HacknetInfo {
     MaxNodes: number;
     NumHashes: number;
 }
+
+export interface Settings {
+    Life?: LifeInfo;
+    Hack?: HackInfo;
+    Hacknet?: HacknetInfo;
+    Server?: ServerInfo;
+    Gang?: GangInfo;
+}

@@ -12,6 +12,7 @@ import {
     LifeInfo,
     ServerInfo,
     ServerStage,
+    Settings,
 } from "./types";
 import { formatTime, lifeStageToString } from "./utils";
 import {
@@ -171,6 +172,31 @@ export async function main(ns: NS) {
     };
     ns.clearPort(HACKNETPORT);
     ns.writePort(HACKNETPORT, JSON.stringify(defaultHacknet));
+
+    if (ns.fileExists("settings.json")) {
+        const settings: Settings = JSON.parse(ns.read("settings.txt"));
+        if (settings.Life) {
+            ns.clearPort(LIFEPORT);
+            ns.writePort(LIFEPORT, JSON.stringify(settings.Life));
+        }
+        if (settings.Hack) {
+            ns.clearPort(HACKPORT);
+            ns.writePort(HACKPORT, JSON.stringify(settings.Hack));
+        }
+        if (settings.Hacknet) {
+            ns.clearPort(HACKNETPORT);
+            ns.writePort(HACKNETPORT, JSON.stringify(settings.Hacknet));
+        }
+        if (settings.Gang) {
+            ns.clearPort(GANGPORT);
+            ns.writePort(GANGPORT, JSON.stringify(settings.Gang));
+        }
+        if (settings.Server) {
+            ns.clearPort(SERVERPORT);
+            ns.writePort(SERVERPORT, JSON.stringify(settings.Server));
+        }
+        ns.rm("settings.txt");
+    }
 
     const handleGangLog = () => {
         const gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));
