@@ -173,7 +173,7 @@ export async function main(ns: NS) {
     ns.clearPort(HACKNETPORT);
     ns.writePort(HACKNETPORT, JSON.stringify(defaultHacknet));
 
-    if (ns.fileExists("settings.json")) {
+    /*if (ns.fileExists("settings.json")) {
         const settings: Settings = JSON.parse(ns.read("settings.txt"));
         if (settings.Life) {
             ns.clearPort(LIFEPORT);
@@ -196,7 +196,7 @@ export async function main(ns: NS) {
             ns.writePort(SERVERPORT, JSON.stringify(settings.Server));
         }
         ns.rm("settings.txt");
-    }
+    }*/
 
     const handleGangLog = () => {
         const gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));

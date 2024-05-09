@@ -207,14 +207,14 @@ export async function main(ns: NS) {
             factionRep = ns.singularity.getFactionRep(faction);
         }
         if ((factionRep > 500000 && waitingAugs > 0) || waitingAugs >= 10) {
-            const settings: Settings = {};
+            /*const settings: Settings = {};
             settings.Life = JSON.parse(ns.peek(LIFEPORT));
             settings.Hack = JSON.parse(ns.peek(HACKPORT));
             settings.Hacknet = JSON.parse(ns.peek(HACKNETPORT));
             settings.Gang = JSON.parse(ns.peek(GANGPORT));
             settings.Server = JSON.parse(ns.peek(SERVERPORT));
-            ns.write("settings.txt", JSON.stringify(settings), "w");
-            ns.singularity.installAugmentations("htp.js");
+            ns.write("settings.txt", JSON.stringify(settings), "w");*/
+            ns.singularity.installAugmentations();
         } else {
             const [newFaction, AugToInstall] = findFactionForAugs();
             const player = ns.getPlayer();
@@ -314,9 +314,16 @@ export async function main(ns: NS) {
                 }
             }
         }
-        if (!joined.includes("Tian Di Hui")) {
+        if (
+            !joined.includes("Tian Di Hui") &&
+            faction === "Tian Di Hui" &&
+            ns.getPlayer().city !== "Ishima"
+        ) {
             ns.singularity.travelToCity("Ishima");
-        } else if (!joined.includes("Sector-12")) {
+        } else if (
+            faction !== "Tian Di Hui" &&
+            ns.getPlayer().city !== "Sector-12"
+        ) {
             ns.singularity.travelToCity("Sector-12");
         }
         // Buy our augs if we enabled it
