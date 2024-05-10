@@ -591,6 +591,7 @@ export class BatchHack {
                         this.isOptimized = false;
                         this.greedStep = 99;
                         this.greed = 0;
+                        this.best = 0;
                         this.checkTime = Date.now() + this.runTime;
                         this.startOptimizing();
                     } else if (!this.isBatching) {
