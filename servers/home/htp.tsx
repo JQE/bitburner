@@ -128,7 +128,6 @@ export async function main(ns: NS) {
         Enabled: false,
         Stage: HackStage.Unknown,
         Type: HackType.Basic,
-        Reset: 0,
         Prep: 0,
         TotalPrep: 0,
         Chance: 0,
@@ -306,21 +305,27 @@ export async function main(ns: NS) {
                 );
             }
         }
-        ns.print(
-            `Progresss: \x1b[36m${
-                hackInfo.Stage === HackStage.Prepping
-                    ? "Prepping"
-                    : `${
-                          hackInfo.Stage === HackStage.Optimizing
-                              ? "Optimizing"
-                              : `${
-                                    hackInfo.Stage === HackStage.Batching
-                                        ? "Batching"
-                                        : "Unknown"
-                                }`
-                      }`
-            }`
-        );
+        let outStage = "Unknown";
+        switch (hackInfo.Stage) {
+            case HackStage.Starting:
+                outStage = "Starting";
+                break;
+            case HackStage.Prepping:
+                outStage = "Prepping";
+                break;
+            case HackStage.Optimizing:
+                outStage = "Optimizing";
+                break;
+            case HackStage.startingBatch:
+                outStage = "Starting Batch";
+                break;
+            case HackStage.Batching:
+                outStage = "Batching";
+                break;
+            case HackStage.Unknown:
+            default:
+        }
+        ns.print(`Progresss: \x1b[36m${outStage}`);
         if (hackInfo.Stage === HackStage.Optimizing) {
             ns.print(
                 `GreedStep: \x1b[36m${ns.formatNumber(hackInfo.GreedStep, 3)}`
@@ -336,9 +341,6 @@ export async function main(ns: NS) {
                     hackInfo.Greed,
                     3
                 )}`
-            );
-            ns.print(
-                `Reset: \x1b[36m${formatTime(hackInfo.Reset - Date.now())}`
             );
         }
         ns.print(`Server Count: \x1b[36m${hackInfo.Count}`);
@@ -365,18 +367,22 @@ export async function main(ns: NS) {
     const handleHackLog = () => {
         const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
         if (hackInfo.Enabled) {
-            switch (hackInfo.Type) {
-                case HackType.Basic:
-                    BasicHackLog(hackInfo);
-                    break;
-                case HackType.Share:
-                    basicShareLog(hackInfo);
-                    break;
-                case HackType.Batch:
-                    BasicBatchLog(hackInfo);
-                    break;
-                default:
-                    ns.print(`Something went wrong`);
+            if (hackInfo.Error) {
+                ns.print(`Error: ${hackInfo.Error}`);
+            } else {
+                switch (hackInfo.Type) {
+                    case HackType.Basic:
+                        BasicHackLog(hackInfo);
+                        break;
+                    case HackType.Share:
+                        basicShareLog(hackInfo);
+                        break;
+                    case HackType.Batch:
+                        BasicBatchLog(hackInfo);
+                        break;
+                    default:
+                        ns.print(`Something went wrong`);
+                }
             }
         }
     };

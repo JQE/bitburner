@@ -75,7 +75,7 @@ export async function main(ns: NS) {
 
     const processJob = (info: GangMemberInfo, jobFocus: ActivityFocus) => {
         const gang = ns.gang.getGangInformation();
-
+        console.log(gang.faction);
         if (jobFocus === ActivityFocus.Respect) {
             const taskStats = ns.gang.getTaskStats("Terrorism");
             const gains = {
@@ -87,14 +87,19 @@ export async function main(ns: NS) {
                 return "Terrorism";
             }
         } else if (jobFocus === ActivityFocus.Money) {
-            const taskStats = ns.gang.getTaskStats("Human Trafficking");
+            console.log(gang.faction);
+            let jobCheck = "Human Trafficking";
+            if (gang.faction === "The Black Hand") {
+                jobCheck = "Money Laundering";
+            }
+            const taskStats = ns.gang.getTaskStats(jobCheck);
             const gains = {
                 Wanted: ns.formulas.gang.wantedLevelGain(gang, info, taskStats),
                 Respect: ns.formulas.gang.respectGain(gang, info, taskStats),
                 Money: ns.formulas.gang.moneyGain(gang, info, taskStats),
             };
             if (gains.Wanted < gains.Respect || gains.Wanted < gains.Money) {
-                return "Human Trafficking";
+                return jobCheck;
             }
         } else {
             const taskStats = ns.gang.getTaskStats("Territory Warfare");
@@ -139,8 +144,17 @@ export async function main(ns: NS) {
         } else if (gangInfo.Activity === ActivityFocus.Warfare) {
             return "Territory Warfare";
         }
+        const gang = ns.gang.getGangInformation();
+        const jobCheck =
+            ns.gang.getGangInformation().faction === "The Black Hand"
+                ? "Money Laundering"
+                : "Human Trafficking";
         return gangInfo.Activity === ActivityFocus.Money
-            ? "Human Trafficking"
+            ? gang.faction === "The Black Hand"
+                ? "Money Laundering"
+                : "Human Trafficking"
+            : gang.faction === "The Black Hand"
+            ? "Cyberterrorism"
             : "Terrorism";
     };
 

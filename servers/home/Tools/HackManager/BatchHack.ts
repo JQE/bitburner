@@ -653,7 +653,6 @@ export class BatchHack {
             this.prepThreadsLeft > 0 ? this.totalPrepTime : undefined;
         hackInfo.Tools = this.toolCount;
         hackInfo.Target = this.target;
-        hackInfo.Reset = this.checkTime;
         this.ns.clearPort(HACKPORT);
         this.ns.writePort(HACKPORT, JSON.stringify(hackInfo));
         await this.ns.sleep(5);

@@ -3,7 +3,6 @@ import { TailModal } from "servers/home/Utils/TailModal";
 import { BasicHack } from "./BasicHack";
 import { HackControl } from "../../Components/HackControl";
 import { ShareHack } from "./ShareHack";
-import { BatchHack } from "./BatchHack";
 import { HackInfo, HackType } from "../../types";
 import { HACKPORT } from "../../Constants";
 
@@ -25,7 +24,7 @@ export async function main(ns: NS) {
     let target = "n00dles";
     const basicHack: BasicHack = new BasicHack(ns, "joesguns");
     const shareHack: ShareHack = new ShareHack(ns, target);
-    const batchHack: BatchHack = new BatchHack(ns, target);
+    let shotgunPid = -1;
 
     const getServers = (
         lambdaCondition = (hostname: string) => true,
@@ -71,7 +70,10 @@ export async function main(ns: NS) {
         } else if (hackInfo.Type === HackType.Share) {
             await shareHack.processHack();
         } else {
-            await batchHack.processHack();
+            if (!ns.isRunning(shotgunPid)) {
+                shotgunPid = ns.exec("Tools/HackManager/Shotgun.js", "home");
+            }
+            await ns.sleep(1000);
         }
     }
 }

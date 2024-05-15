@@ -25,17 +25,18 @@ export enum HackType {
     Batch,
     Unknown,
 }
-export enum HackStage {
-    Prepping = 1,
-    Optimizing,
-    Batching,
-    Unknown,
-}
+export const HackStage = {
+    Starting: 0,
+    Prepping: 1,
+    Optimizing: 3,
+    startingBatch: 4,
+    Batching: 5,
+    Unknown: 6,
+} as const;
 
 export interface HackInfo {
     Type: HackType;
-    Stage: HackStage;
-    Reset: number;
+    Stage: Number;
     TotalPrep: number;
     Prep: number;
     Chance: number;
