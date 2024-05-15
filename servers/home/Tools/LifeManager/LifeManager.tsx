@@ -1,25 +1,35 @@
 import React from "react";
 import { LifeStages, MyFactionList } from "./types";
 import { NS } from "NetscriptDefinitions";
-import { LifeInfo, ServerInfo, Settings } from "../../types";
-import {
-    GANGPORT,
-    HACKNETPORT,
-    HACKPORT,
-    LIFEPORT,
-    SERVERPORT,
-} from "../../Constants";
+import { LifeInfo, ServerInfo } from "../../types";
+import { LIFEPORT, SERVERPORT } from "../../Constants";
 import { actionToString, findServerPath } from "../../utils";
 
 export async function main(ns: NS) {
     ns.disableLog("ALL");
     let lifeStage: LifeStages = LifeStages.University;
     let running = true;
-    let faction: string = undefined;
-    let lastFactionAug = undefined;
-    let nfgCount = 0;
     let joined = [];
     let toolCount = 0;
+
+    const findFactionForThisReset = (): string => {
+        let outFaction = "";
+        const allAugs = ns.singularity.getOwnedAugmentations(true);
+        let found = false;
+        Object.keys(MyFactionList).forEach((loopFaction) => {
+            if (found) return;
+            const newFaction = MyFactionList[loopFaction];
+            newFaction.augs.forEach((aug) => {
+                if (found) return;
+                if (!allAugs.includes(aug)) {
+                    outFaction = loopFaction;
+                    found = true;
+                }
+            });
+        });
+        return outFaction;
+    };
+    const faction: string = findFactionForThisReset();
 
     const manageWork = () => {
         let action = ns.singularity.getCurrentWork();
@@ -50,9 +60,11 @@ export async function main(ns: NS) {
                     }
                 }
             }
+            const player = ns.getPlayer();
             if (
-                ns.getPlayer().factions.length > 0 ||
-                (ns.gang.inGang() && ns.getPlayer().factions.length > 1)
+                player.factions.includes(faction) &&
+                (player.factions.length > 0 ||
+                    (ns.gang.inGang() && player.factions.length > 1))
             ) {
                 const serverInfo: ServerInfo = JSON.parse(ns.peek(SERVERPORT));
                 if (
@@ -61,16 +73,11 @@ export async function main(ns: NS) {
                     (serverInfo.CurrentSize === 128 &&
                         serverInfo.AtRam === serverInfo.Max)
                 ) {
-                    let [newFaction, AugToInstall] = findFactionForWork();
-                    if (newFaction !== undefined) {
-                        lifeStage = LifeStages.Factions;
-                    }
+                    lifeStage = LifeStages.Factions;
                 }
             }
         } else if (lifeStage === LifeStages.Factions) {
             // checking if i need to join a faction or change faction i work for
-            let [newFaction, AugToInstall] = findFactionForWork();
-            faction = newFaction;
             if (faction === undefined || faction === "") {
                 lifeStage = LifeStages.Crime;
             } else {
@@ -102,8 +109,7 @@ export async function main(ns: NS) {
         }
     };
 
-    const findFactionForWork = (): [string, string] => {
-        let outFaction = "";
+    const findAugForFaction = (): string => {
         let outAug = "";
         const allAugs = ns.singularity.getOwnedAugmentations(true);
         let found = false;
@@ -113,88 +119,16 @@ export async function main(ns: NS) {
             newFaction.augs.forEach((aug) => {
                 if (found) return;
                 if (!allAugs.includes(aug)) {
-                    outFaction = loopFaction;
                     outAug = aug;
                     found = true;
                 }
-                if (
-                    aug === "NeuroFlux Governor" &&
-                    nfgCount < newFaction.Count
-                ) {
-                    const info = ns.getResetInfo();
-                    const nfgLevel = info.ownedAugs.get("NeuroFlux Governor");
-                    const num_nfg = ns.singularity
-                        .getOwnedAugmentations(true)
-                        .reduce(
-                            (acc, aug) =>
-                                acc + (aug == "NeuroFlux Governor" ? 1 : 0),
-                            0
-                        );
-                    if (nfgLevel + (num_nfg - 1) < newFaction.Level) {
-                        outFaction = loopFaction;
-                        outAug = aug;
-                        found = true;
-                    }
-                }
-            });
-        });
-        if (lastFactionAug !== outFaction) {
-            lastFactionAug = outFaction;
-            nfgCount = 0;
-        }
-        if (
-            outFaction !== "" &&
-            outFaction !== undefined &&
-            ns.singularity.getFactionRep(outFaction) >
-                MyFactionList[outFaction].rep
-        ) {
-            outFaction = undefined;
-            outAug = undefined;
-        }
-        return [outFaction, outAug];
-    };
-
-    const findFactionForAugs = (): [string, string] => {
-        let outFaction = "";
-        let outAug = "";
-        const allAugs = ns.singularity.getOwnedAugmentations(true);
-        let found = false;
-        Object.keys(MyFactionList).forEach((loopFaction) => {
-            if (found) return;
-            const newFaction = MyFactionList[loopFaction];
-            newFaction.augs.forEach((aug) => {
-                if (found) return;
-                if (!allAugs.includes(aug)) {
-                    outFaction = loopFaction;
+                if (aug === "NeuroFlux Governor") {
                     outAug = aug;
                     found = true;
                 }
-                if (
-                    aug === "NeuroFlux Governor" &&
-                    nfgCount < newFaction.Count
-                ) {
-                    const info = ns.getResetInfo();
-                    const nfgLevel = info.ownedAugs.get("NeuroFlux Governor");
-                    const num_nfg = ns.singularity
-                        .getOwnedAugmentations(true)
-                        .reduce(
-                            (acc, aug) =>
-                                acc + (aug == "NeuroFlux Governor" ? 1 : 0),
-                            0
-                        );
-                    if (nfgLevel + (num_nfg - 1) < newFaction.Level) {
-                        outFaction = loopFaction;
-                        outAug = aug;
-                        found = true;
-                    }
-                }
             });
         });
-        if (lastFactionAug !== outFaction) {
-            lastFactionAug = outFaction;
-            nfgCount = 0;
-        }
-        return [outFaction, outAug];
+        return outAug;
     };
 
     const buyAugs = () => {
@@ -216,25 +150,20 @@ export async function main(ns: NS) {
             ns.write("settings.txt", JSON.stringify(settings), "w");*/
             ns.singularity.installAugmentations();
         } else {
-            const [newFaction, AugToInstall] = findFactionForAugs();
+            const AugToInstall = findAugForFaction();
             const player = ns.getPlayer();
-            if (player.factions.includes(newFaction)) {
+            if (player.factions.includes(faction)) {
                 const repReq =
                     ns.singularity.getAugmentationRepReq(AugToInstall);
-                const rep = ns.singularity.getFactionRep(newFaction);
+                const rep = ns.singularity.getFactionRep(faction);
                 if (rep >= repReq) {
                     const cost =
                         ns.singularity.getAugmentationPrice(AugToInstall);
                     if (ns.getServerMoneyAvailable("home") > cost) {
-                        if (
-                            ns.singularity.purchaseAugmentation(
-                                newFaction,
-                                AugToInstall
-                            ) &&
-                            AugToInstall === "NeuroFlux Governor"
-                        ) {
-                            nfgCount++;
-                        }
+                        ns.singularity.purchaseAugmentation(
+                            faction,
+                            AugToInstall
+                        );
                     }
                 }
             }
@@ -305,7 +234,17 @@ export async function main(ns: NS) {
             ns.heart.break() < -54000 &&
             !ns.gang.inGang()
         ) {
-            const player = ns.getPlayer();
+            let player = ns.getPlayer();
+            if (!player.factions.includes("Slum Snakes")) {
+                const invites = ns.singularity.checkFactionInvitations();
+                if (invites.includes("Slum Snakes")) {
+                    ns.singularity.joinFaction("Slum Snakes");
+                    joined.push("Slum Snakes");
+                    player = ns.getPlayer();
+                } else {
+                    return;
+                }
+            }
             for (let i = 0; i < player.factions.length; i++) {
                 const myFaction = player.factions[i];
                 if (myFaction === "Slum Snakes") {
