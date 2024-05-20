@@ -113,21 +113,15 @@ export async function main(ns: NS) {
         let outAug = "";
         const allAugs = ns.singularity.getOwnedAugmentations(true);
         let found = false;
-        Object.keys(MyFactionList).forEach((loopFaction) => {
+        const newFaction = MyFactionList[faction];
+        newFaction.augs.forEach((aug) => {
             if (found) return;
-            const newFaction = MyFactionList[loopFaction];
-            newFaction.augs.forEach((aug) => {
-                if (found) return;
-                if (!allAugs.includes(aug)) {
-                    outAug = aug;
-                    found = true;
-                }
-                if (aug === "NeuroFlux Governor") {
-                    outAug = aug;
-                    found = true;
-                }
-            });
+            if (!allAugs.includes(aug)) {
+                outAug = aug;
+                found = true;
+            }
         });
+        if (!found) return "NeuroFlux Governor";
         return outAug;
     };
 

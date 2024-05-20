@@ -1,8 +1,8 @@
 import React from "react";
 import { TailModal } from "servers/home/Utils/TailModal";
 import { ServerControl } from "../../Components/ServerControl";
-import { ServerInfo, ServerStage } from "../../types";
-import { SERVERPORT } from "../../Constants";
+import { HackInfo, HackType, ServerInfo, ServerStage } from "../../types";
+import { HACKPORT, SERVERPORT } from "../../Constants";
 
 export async function main(ns: NS) {
     ns.disableLog("ALL");
@@ -16,6 +16,8 @@ export async function main(ns: NS) {
     let maxRam = ns.getPurchasedServerMaxRam();
     let running = true;
     let lastMessage = "";
+    const hackScript: string = "baseHack.js";
+    const scriptMem = ns.getScriptRam(hackScript);
 
     const countAtRam = () => {
         let tempAtRam = 0;
@@ -62,6 +64,15 @@ export async function main(ns: NS) {
                 count++;
                 atRam++;
                 servers.push(hostname);
+                const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
+                if (hackInfo.Enabled && hackInfo.Type === HackType.Basic) {
+                    const maxRam = ns.getServerMaxRam(hostname);
+                    const used = ns.getServerUsedRam(hostname);
+                    const threads = Math.floor((maxRam - used) / scriptMem);
+                    if (threads > 0) {
+                        ns.exec(hackScript, hostname, threads, hackInfo.Target);
+                    }
+                }
             }
         }
         return cost;
@@ -86,6 +97,16 @@ export async function main(ns: NS) {
             if (ns.upgradePurchasedServer(server, currentSize)) {
                 atRam++;
                 lastMessage = `Upgraded ${server}`;
+                const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
+                if (hackInfo.Enabled) {
+                    ns.killall(server);
+                    const maxRam = ns.getServerMaxRam(server);
+                    const used = ns.getServerUsedRam(server);
+                    const threads = Math.floor((maxRam - used) / scriptMem);
+                    if (threads > 0) {
+                        ns.exec(hackScript, server, threads, hackInfo.Target);
+                    }
+                }
             } else {
                 lastMessage = `Failed to upgrade server ${server} to ${currentSize}`;
             }
