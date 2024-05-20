@@ -419,7 +419,10 @@ export async function main(ns: NS) {
             );
         }
     };
-
+    const sleevePid = ns.exec("Tools/Sleeves/SleeveManager.js", "home");
+    if (sleevePid <= 0) {
+        ns.tprint("Failed to start sleeve manager");
+    }
     while (running) {
         await ns.asleep(1000);
         ns.clearLog();
@@ -449,11 +452,13 @@ export async function main(ns: NS) {
         return servers;
     };
 
+    ns.kill(sleevePid);
     const servers = getServers((server) => {
         return ns.hasRootAccess(server);
     }, "home");
     servers.forEach((server) => {
         ns.killall(server);
     });
+    ns.kill(sleevePid);
     ns.closeTail();
 }
