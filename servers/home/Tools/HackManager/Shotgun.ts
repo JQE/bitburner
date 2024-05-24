@@ -549,8 +549,8 @@ export async function main(ns: NS) {
                     prepServers--;
                 }
                 if (prepServers <= 0) {
-                    stage = HackStage.Optimizing;
                     dataPort.clear();
+                    stage = HackStage.Starting;
                 }
                 break;
             case HackStage.Optimizing:

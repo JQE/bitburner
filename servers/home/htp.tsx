@@ -99,6 +99,7 @@ export async function main(ns: NS) {
         Enabled: false,
         BuyGear: false,
         BuyAugs: false,
+        Ascend: false,
         Activity: ActivityFocus.Money,
         Duration: 1,
         MemberCount: 0,
@@ -220,7 +221,11 @@ export async function main(ns: NS) {
                     2
                 )}`
             );
-            ns.print(`Power: \x1b[36m${ns.formatNumber(gangInfo.Power)}`);
+            ns.print(
+                `Power: \x1b[36m${ns.formatNumber(
+                    gangInfo.Power
+                )} \x1b[32mAsc En: \x1b[36m${gangInfo.Ascend}`
+            );
             ns.print(
                 `Territory: \x1b[36m${ns.formatPercent(gangInfo.Territory)}`
             );
@@ -419,10 +424,10 @@ export async function main(ns: NS) {
             );
         }
     };
-    const sleevePid = ns.exec("Tools/Sleeves/SleeveManager.js", "home");
+    /*const sleevePid = ns.exec("Tools/Sleeves/SleeveManager.js", "home");
     if (sleevePid <= 0) {
         ns.tprint("Failed to start sleeve manager");
-    }
+    }*/
     while (running) {
         await ns.asleep(1000);
         ns.clearLog();
@@ -452,13 +457,12 @@ export async function main(ns: NS) {
         return servers;
     };
 
-    ns.kill(sleevePid);
     const servers = getServers((server) => {
         return ns.hasRootAccess(server);
     }, "home");
     servers.forEach((server) => {
         ns.killall(server);
     });
-    ns.kill(sleevePid);
+    //ns.kill(sleevePid);
     ns.closeTail();
 }

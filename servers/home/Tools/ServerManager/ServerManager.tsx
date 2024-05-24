@@ -98,7 +98,7 @@ export async function main(ns: NS) {
                 atRam++;
                 lastMessage = `Upgraded ${server}`;
                 const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
-                if (hackInfo.Enabled) {
+                if (hackInfo.Enabled && hackInfo.Type === HackType.Basic) {
                     ns.killall(server);
                     const maxRam = ns.getServerMaxRam(server);
                     const used = ns.getServerUsedRam(server);

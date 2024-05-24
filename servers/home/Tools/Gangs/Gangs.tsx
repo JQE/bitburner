@@ -173,8 +173,9 @@ export async function main(ns: NS) {
         const gangInformation = ns.gang.getGangInformation();
 
         if (
-            gangInformation.respect > baseRep ||
-            gangInformation.respect === 1
+            (gangInformation.respect > baseRep ||
+                gangInformation.respect === 1) &&
+            gangInfo.Ascend
         ) {
             if (ns.gang.getAscensionResult(member.name)?.str > 1.5) {
                 baseRep = gangInformation.respect;

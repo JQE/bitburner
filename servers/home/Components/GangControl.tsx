@@ -14,9 +14,14 @@ export const GangControl = ({ ns }: IGangControlProps) => {
     const [gangPid, setGangPid] = useState(-1);
     const [buy, setBuy] = useState<boolean>(false);
     const [buyAugs, setBuyAugs] = useState<boolean>(false);
+    const [ascend, setAscend] = useState<boolean>(false);
     const [activity, setActivity] = useState<ActivityFocus>(
         ActivityFocus.Money
     );
+
+    const handleAscend = () => {
+        setAscend(!ascend);
+    };
 
     const handleBuyEquipment = () => {
         setBuy(!buy);
@@ -61,6 +66,7 @@ export const GangControl = ({ ns }: IGangControlProps) => {
         gangInfo.BuyAugs = buyAugs;
         gangInfo.BuyGear = buy;
         gangInfo.Activity = activity;
+        gangInfo.Ascend = ascend;
         ns.clearPort(GANGPORT);
         ns.writePort(GANGPORT, JSON.stringify(gangInfo));
         setShowModal(false);
@@ -142,6 +148,16 @@ export const GangControl = ({ ns }: IGangControlProps) => {
                                                 onClick={handleBuyAugs}
                                             >
                                                 Buy Augs
+                                            </button>
+                                            <button
+                                                className={`text-white font-bold py-2 px-4 rounded w-full ${
+                                                    ascend
+                                                        ? "bg-red-500"
+                                                        : "bg-green-500"
+                                                }`}
+                                                onClick={handleAscend}
+                                            >
+                                                Enable Ascension
                                             </button>
                                             <div className={"col-span-2"}>
                                                 <div className="inline-flex">
