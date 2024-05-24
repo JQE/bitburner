@@ -1,10 +1,10 @@
-import { CrimeType, SleeveSynchroTask } from "NetscriptDefinitions";
+import { CrimeType } from "NetscriptDefinitions";
 
 export async function main(ns: NS) {
-    const sleeveCount = ns.sleeve.getNumSleeves();
     let running = true;
     let currentClass = "";
     while (running) {
+        const sleeveCount = ns.sleeve.getNumSleeves();
         for (let i = 0; i < sleeveCount; i++) {
             const sleeve = ns.sleeve.getSleeve(i);
             const task = ns.sleeve.getTask(i);
