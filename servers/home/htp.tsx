@@ -13,6 +13,7 @@ import {
     ServerInfo,
     ServerStage,
     Settings,
+    SleeveInfo,
 } from "./types";
 import { formatTime, lifeStageToString } from "./utils";
 import {
@@ -21,6 +22,7 @@ import {
     SERVERPORT,
     LIFEPORT,
     HACKNETPORT,
+    SLEEVEPORT,
 } from "./Constants";
 import { ActivityFocus } from "./Tools/Gangs/Gangs";
 import { LifeStages } from "./Tools/LifeManager/types";
@@ -172,6 +174,15 @@ export async function main(ns: NS) {
     };
     ns.clearPort(HACKNETPORT);
     ns.writePort(HACKNETPORT, JSON.stringify(defaultHacknet));
+
+    const defaultSleeve: SleeveInfo = {
+        Enabled: false,
+        Recovered: 0,
+        Synchronized: 0,
+        BuyAugs: false,
+    };
+    ns.clearPort(SLEEVEPORT);
+    ns.writePort(SLEEVEPORT, JSON.stringify(defaultSleeve));
 
     /*if (ns.fileExists("settings.json")) {
         const settings: Settings = JSON.parse(ns.read("settings.txt"));
@@ -409,6 +420,20 @@ export async function main(ns: NS) {
         }
     };
 
+    const handleSleeveLog = () => {
+        const sleeveInfo: SleeveInfo = JSON.parse(ns.peek(SLEEVEPORT));
+        const sleeveCount = ns.sleeve.getNumSleeves();
+        if (sleeveInfo.Enabled) {
+            ns.print(`\x1b[35mSleeve Info`);
+            ns.print(
+                `Recovered: \x1b[36m${sleeveInfo.Recovered} / ${sleeveCount}`
+            );
+            ns.print(
+                `Synced: \x1b[36m${sleeveInfo.Synchronized} / ${sleeveCount}`
+            );
+        }
+    };
+
     const handleHacknetLog = () => {
         const hacknetInfo: HacknetInfo = JSON.parse(ns.peek(HACKNETPORT));
         if (hacknetInfo.Enabled) {
@@ -436,6 +461,7 @@ export async function main(ns: NS) {
         handleHackLog();
         handleLifeLog();
         handleHacknetLog();
+        handleSleeveLog();
         ns.print(``);
         ns.print(`\x1b[35mMain Info`);
         ns.print(`Heart: \x1b[36m${ns.formatNumber(ns.heart.break(), 3)}`);

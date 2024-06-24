@@ -181,9 +181,14 @@ export async function main(ns: NS) {
         });
 
         // time to upgrade our personal server maybe.
-        const cost = ns.singularity.getUpgradeHomeRamCost();
-        if (ns.getServerMoneyAvailable("home") > cost) {
+        const ramCost = ns.singularity.getUpgradeHomeRamCost();
+        if (ns.getServerMoneyAvailable("home") > ramCost) {
             ns.singularity.upgradeHomeRam();
+        }
+        // time to upgrade our personal server maybe.
+        const coreCost = ns.singularity.getUpgradeHomeCoresCost();
+        if (ns.getServerMoneyAvailable("home") > coreCost) {
+            ns.singularity.upgradeHomeCores();
         }
         // Buy tor router if we don't have it
         if (!ns.hasTorRouter()) {
