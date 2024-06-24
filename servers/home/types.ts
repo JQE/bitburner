@@ -91,6 +91,13 @@ export interface HacknetInfo {
     NumHashes: number;
 }
 
+export interface SleeveInfo {
+    Enabled: boolean;
+    Recovered: number;
+    Synchronized: number;
+    BuyAugs: boolean;
+}
+
 export interface Settings {
     Life?: LifeInfo;
     Hack?: HackInfo;

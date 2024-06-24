@@ -655,6 +655,6 @@ export class BatchHack {
         hackInfo.Target = this.target;
         this.ns.clearPort(HACKPORT);
         this.ns.writePort(HACKPORT, JSON.stringify(hackInfo));
-        await this.ns.sleep(5);
+        await this.ns.sleep(50);
     };
 }

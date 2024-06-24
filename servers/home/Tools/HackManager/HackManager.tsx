@@ -13,6 +13,7 @@ const localScripts = [
     "Tools/ServerManager/ServerManager.js",
     "Tools/LifeManager/LifeManager.js",
     "Tools/Hacknet/HacknetManager.js",
+    "Tools/Sleeves/SleeveManager.js",
 ];
 
 export async function main(ns: NS) {
