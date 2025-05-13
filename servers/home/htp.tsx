@@ -39,8 +39,7 @@ export async function main(ns: NS) {
     /** Alias for document to prevent excessive RAM use */
     const doc = (0, eval)("document") as Document;
     ns.disableLog("ALL");
-    ns.tail();
-
+    ns.ui.openTail();
     let running = true;
     const tm = new TailModal(ns, doc);
 
@@ -97,7 +96,7 @@ export async function main(ns: NS) {
         300
     );
 
-    const defaultGang: GangInfo = {
+    /*const defaultGang: GangInfo = {
         Enabled: false,
         BuyGear: false,
         BuyAugs: false,
@@ -112,7 +111,7 @@ export async function main(ns: NS) {
         Territory: 0,
     };
     ns.clearPort(GANGPORT);
-    ns.writePort(GANGPORT, JSON.stringify(defaultGang));
+    ns.writePort(GANGPORT, JSON.stringify(defaultGang));*/
 
     const defaultServer: ServerInfo = {
         Enabled: false,
@@ -146,7 +145,7 @@ export async function main(ns: NS) {
     ns.clearPort(HACKPORT);
     ns.writePort(HACKPORT, JSON.stringify(defaultHack));
 
-    const defaultLife: LifeInfo = {
+    /*const defaultLife: LifeInfo = {
         Enabled: false,
         Stage: LifeStages.University,
         Action: undefined,
@@ -157,9 +156,9 @@ export async function main(ns: NS) {
         ownedAugs: 0,
     };
     ns.clearPort(LIFEPORT);
-    ns.writePort(LIFEPORT, JSON.stringify(defaultLife));
+    ns.writePort(LIFEPORT, JSON.stringify(defaultLife));*/
 
-    const defaultHacknet: HacknetInfo = {
+    /*const defaultHacknet: HacknetInfo = {
         Enabled: false,
         Buy: false,
         UpgradeRam: false,
@@ -173,16 +172,16 @@ export async function main(ns: NS) {
         MaxNodes: 0,
     };
     ns.clearPort(HACKNETPORT);
-    ns.writePort(HACKNETPORT, JSON.stringify(defaultHacknet));
+    ns.writePort(HACKNETPORT, JSON.stringify(defaultHacknet));*/
 
-    const defaultSleeve: SleeveInfo = {
+    /*const defaultSleeve: SleeveInfo = {
         Enabled: false,
         Recovered: 0,
         Synchronized: 0,
         BuyAugs: false,
     };
     ns.clearPort(SLEEVEPORT);
-    ns.writePort(SLEEVEPORT, JSON.stringify(defaultSleeve));
+    ns.writePort(SLEEVEPORT, JSON.stringify(defaultSleeve));*/
 
     /*if (ns.fileExists("settings.json")) {
         const settings: Settings = JSON.parse(ns.read("settings.txt"));
@@ -209,7 +208,7 @@ export async function main(ns: NS) {
         ns.rm("settings.txt");
     }*/
 
-    const handleGangLog = () => {
+    /*const handleGangLog = () => {
         const gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));
         if (gangInfo.Enabled === true) {
             ns.print(`\x1b[35mGang Info`);
@@ -241,7 +240,7 @@ export async function main(ns: NS) {
                 `Territory: \x1b[36m${ns.formatPercent(gangInfo.Territory)}`
             );
         }
-    };
+    };*/
 
     const handleServerLog = () => {
         const serverInfo: ServerInfo = JSON.parse(ns.peek(SERVERPORT));
@@ -403,7 +402,7 @@ export async function main(ns: NS) {
         }
     };
 
-    const handleLifeLog = () => {
+    /*const handleLifeLog = () => {
         const lifeInfo: LifeInfo = JSON.parse(ns.peek(LIFEPORT));
         if (lifeInfo.Enabled) {
             ns.print(`\x1b[35mLife Info`);
@@ -418,9 +417,9 @@ export async function main(ns: NS) {
             }
             ns.print(`Augs: \x1b[36m${lifeInfo.ownedAugs}`);
         }
-    };
+    };*/
 
-    const handleSleeveLog = () => {
+    /*const handleSleeveLog = () => {
         const sleeveInfo: SleeveInfo = JSON.parse(ns.peek(SLEEVEPORT));
         const sleeveCount = ns.sleeve.getNumSleeves();
         if (sleeveInfo.Enabled) {
@@ -432,9 +431,9 @@ export async function main(ns: NS) {
                 `Synced: \x1b[36m${sleeveInfo.Synchronized} / ${sleeveCount}`
             );
         }
-    };
+    };*/
 
-    const handleHacknetLog = () => {
+    /*const handleHacknetLog = () => {
         const hacknetInfo: HacknetInfo = JSON.parse(ns.peek(HACKNETPORT));
         if (hacknetInfo.Enabled) {
             ns.print(`\x1b[35mHacknet INfo`);
@@ -448,7 +447,7 @@ export async function main(ns: NS) {
                 `Ram | Min: \x1b[36m${hacknetInfo.minRam} \x1b[32mMax: \x1b[36m${hacknetInfo.maxRam}`
             );
         }
-    };
+    };*/
     /*const sleevePid = ns.exec("Tools/Sleeves/SleeveManager.js", "home");
     if (sleevePid <= 0) {
         ns.tprint("Failed to start sleeve manager");
@@ -456,15 +455,15 @@ export async function main(ns: NS) {
     while (running) {
         await ns.asleep(1000);
         ns.clearLog();
-        handleGangLog();
+        //handleGangLog();
         handleServerLog();
         handleHackLog();
-        handleLifeLog();
-        handleHacknetLog();
-        handleSleeveLog();
+        //handleLifeLog();
+        //handleHacknetLog();
+        //handleSleeveLog();
         ns.print(``);
         ns.print(`\x1b[35mMain Info`);
-        ns.print(`Heart: \x1b[36m${ns.formatNumber(ns.heart.break(), 3)}`);
+        //ns.print(`Heart: \x1b[36m${ns.formatNumber(ns.heart.break(), 3)}`);
     }
 
     const getServers = (
@@ -490,5 +489,5 @@ export async function main(ns: NS) {
         ns.killall(server);
     });
     //ns.kill(sleevePid);
-    ns.closeTail();
+    ns.ui.closeTail();
 }
