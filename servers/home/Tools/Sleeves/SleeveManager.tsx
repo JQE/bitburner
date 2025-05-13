@@ -12,8 +12,8 @@ export async function main(ns: NS) {
     });
     let running = true;
     const workingFactions = [];
-    const gang = ns.gang.getGangInformation();
     if (ns.gang.inGang()) {
+        const gang = ns.gang.getGangInformation();
         workingFactions.push(gang.faction);
     }
     const sleeveCount = ns.sleeve.getNumSleeves();
@@ -32,12 +32,12 @@ export async function main(ns: NS) {
             if (sleeve.shock > 0) {
                 recovered--;
                 synced--;
-                if (task.type !== "RECOVERY") {
+                if (task !== null && task.type !== "RECOVERY") {
                     ns.sleeve.setToShockRecovery(i);
                 }
             } else if (sleeve.sync < 100) {
                 synced--;
-                if (task.type !== "SYNCHRO") {
+                if (task !== null && task.type !== "SYNCHRO") {
                     ns.sleeve.setToSynchronize(i);
                 }
             } else {

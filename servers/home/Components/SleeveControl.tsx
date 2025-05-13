@@ -17,7 +17,7 @@ export const SleeveControl = ({ ns }: ISleeveControlProps) => {
         setEnabled(!enabled);
     };
     const handleBuyAugs = () => {
-        setBuyAugs(true);
+        setBuyAugs(!buyAugs);
     };
 
     const setShow = () => {

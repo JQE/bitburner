@@ -39,7 +39,7 @@ export async function main(ns: NS) {
             } else {
                 if (action === null || action.type !== "CLASS") {
                     ns.singularity.universityCourse(
-                        "rothman university",
+                        "Rothman University",
                         "Computer Science",
                         true
                     );
