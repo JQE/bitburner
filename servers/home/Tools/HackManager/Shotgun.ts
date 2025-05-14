@@ -81,12 +81,11 @@ export async function main(ns: NS) {
             pSim.hackDifficulty = pSim.minDifficulty;
 
             previousScore =
-                (pSim.moneyMax / ns.formulas.hacking.weakenTime(pSim, player)) *
-                ns.formulas.hacking.hackChance(pSim, player);
+                (pSim.moneyMax / ns.getWeakenTime(pSim.hostname)) *
+                ns.hackAnalyzeChance(pSim.hostname);
             currentScore =
-                (serverSim.moneyMax /
-                    ns.formulas.hacking.weakenTime(serverSim, player)) *
-                ns.formulas.hacking.hackChance(serverSim, player);
+                (serverSim.moneyMax / ns.getWeakenTime(serverSim.hostname)) *
+                ns.hackAnalyzeChance(serverSim.hostname);
 
             if (currentScore > previousScore) target = server;
         }
@@ -195,10 +194,11 @@ export async function main(ns: NS) {
 
         let wTime;
 
-        wTime = ns.formulas.hacking.weakenTime(
+        /*wTime = ns.formulas.hacking.weakenTime(
             ns.getServer(target),
             ns.getPlayer()
-        );
+        );*/
+        wTime = ns.getWeakenTime(target);
         const gTime = wTime * 0.8;
 
         if (money < maxMoney) {
