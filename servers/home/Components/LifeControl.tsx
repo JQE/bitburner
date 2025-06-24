@@ -38,7 +38,7 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
             ns.scriptKill("Tools/LifeManager/LifeManager.js", "home");
             newLifePid = ns.exec("Tools/LifeManager/LifeManager.js", "home");
             if (newLifePid === 0) {
-                ns.print("Failed to run Hack script");
+                ns.print("Failed to run Life script");
                 newLifePid = -1;
                 newEnabled = false;
             }
