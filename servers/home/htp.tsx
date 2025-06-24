@@ -24,7 +24,7 @@ import {
     HACKNETPORT,
     SLEEVEPORT,
 } from "./Constants";
-import { ActivityFocus } from "./Tools/Gangs/Gangs";
+import { ActivityFocus, ActivityFocusName } from "./Tools/Gangs/Gangs";
 import { LifeStages } from "./Tools/LifeManager/types";
 
 const localScripts = [
@@ -43,45 +43,6 @@ export async function main(ns: NS) {
     let running = true;
     const tm = new TailModal(ns, doc);
 
-    /*let size = 8;
-    let currentSize = 99999999999;
-    let max = ns.getPurchasedServerLimit();
-    let privateServers = ns.getPurchasedServers();
-    let count = privateServers.length;
-    let atRam = 0;
-    let maxRam = ns.getPurchasedServerMaxRam();
-
-    const countAtRam = () => {
-        let tempAtRam = 0;
-        privateServers.forEach((server) => {
-            const info = ns.getServer(server);
-            if (info.maxRam >= currentSize) {
-                tempAtRam++;
-            }
-        });
-
-        return tempAtRam;
-    };
-
-    atRam = count;
-    if (count >= max) {
-        atRam = 0;
-        privateServers.forEach((server) => {
-            const info = ns.getServer(server);
-            if (info.maxRam < currentSize) {
-                currentSize = info.maxRam;
-            }
-        });
-        atRam = countAtRam();
-        while (atRam === count && currentSize < maxRam) {
-            currentSize *= 2;
-            atRam = countAtRam();
-        }
-    }
-    size = currentSize;
-    if (size === 99999999999) size = 8;
-    if (currentSize === 99999999999) currentSize = 8;*/
-
     const onQuit = () => {
         running = false;
     };
@@ -96,7 +57,7 @@ export async function main(ns: NS) {
         300
     );
 
-    /*const defaultGang: GangInfo = {
+    const defaultGang: GangInfo = {
         Enabled: false,
         BuyGear: false,
         BuyAugs: false,
@@ -111,7 +72,7 @@ export async function main(ns: NS) {
         Territory: 0,
     };
     ns.clearPort(GANGPORT);
-    ns.writePort(GANGPORT, JSON.stringify(defaultGang));*/
+    ns.writePort(GANGPORT, JSON.stringify(defaultGang));
 
     const defaultServer: ServerInfo = {
         Enabled: false,
@@ -145,7 +106,7 @@ export async function main(ns: NS) {
     ns.clearPort(HACKPORT);
     ns.writePort(HACKPORT, JSON.stringify(defaultHack));
 
-    /*const defaultLife: LifeInfo = {
+    const defaultLife: LifeInfo = {
         Enabled: false,
         Stage: LifeStages.University,
         Action: undefined,
@@ -156,7 +117,7 @@ export async function main(ns: NS) {
         ownedAugs: 0,
     };
     ns.clearPort(LIFEPORT);
-    ns.writePort(LIFEPORT, JSON.stringify(defaultLife));*/
+    ns.writePort(LIFEPORT, JSON.stringify(defaultLife));
 
     /*const defaultHacknet: HacknetInfo = {
         Enabled: false,
@@ -208,17 +169,23 @@ export async function main(ns: NS) {
         ns.rm("settings.txt");
     }*/
 
-    /*const handleGangLog = () => {
+    const handleGangLog = () => {
         const gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));
         if (gangInfo.Enabled === true) {
             ns.print(`\x1b[35mGang Info`);
             ns.print(`Members: \x1b[36m${gangInfo.MemberCount}`);
-            ns.print(
-                `Money: \x1b[36m${ns.formatNumber(
-                    gangInfo.MoneyGain * gangInfo.Duration,
-                    2
-                )}/s`
-            );
+            if (gangInfo.Activity == ActivityFocus.Money) {
+                ns.print(
+                    `Money: \x1b[36m${ns.formatNumber(
+                        gangInfo.MoneyGain * gangInfo.Duration,
+                        2
+                    )}/s`
+                );
+            } else {
+                ns.print(
+                    `Activity: \x1b[36m${ActivityFocusName[gangInfo.Activity]}`
+                );
+            }
             ns.print(
                 `Gear: \x1b[36m${gangInfo.BuyGear}    \x1b[32mAugs: \x1b[36m${gangInfo.BuyAugs}`
             );
@@ -240,7 +207,7 @@ export async function main(ns: NS) {
                 `Territory: \x1b[36m${ns.formatPercent(gangInfo.Territory)}`
             );
         }
-    };*/
+    };
 
     const handleServerLog = () => {
         const serverInfo: ServerInfo = JSON.parse(ns.peek(SERVERPORT));
@@ -402,7 +369,7 @@ export async function main(ns: NS) {
         }
     };
 
-    /*const handleLifeLog = () => {
+    const handleLifeLog = () => {
         const lifeInfo: LifeInfo = JSON.parse(ns.peek(LIFEPORT));
         if (lifeInfo.Enabled) {
             ns.print(`\x1b[35mLife Info`);
@@ -417,7 +384,7 @@ export async function main(ns: NS) {
             }
             ns.print(`Augs: \x1b[36m${lifeInfo.ownedAugs}`);
         }
-    };*/
+    };
 
     /*const handleSleeveLog = () => {
         const sleeveInfo: SleeveInfo = JSON.parse(ns.peek(SLEEVEPORT));
@@ -455,15 +422,15 @@ export async function main(ns: NS) {
     while (running) {
         await ns.asleep(1000);
         ns.clearLog();
-        //handleGangLog();
+        handleGangLog();
         handleServerLog();
         handleHackLog();
-        //handleLifeLog();
+        handleLifeLog();
         //handleHacknetLog();
         //handleSleeveLog();
         ns.print(``);
         ns.print(`\x1b[35mMain Info`);
-        //ns.print(`Heart: \x1b[36m${ns.formatNumber(ns.heart.break(), 3)}`);
+        ns.print(`Heart: \x1b[36m${ns.formatNumber(ns.heart.break(), 3)}`);
     }
 
     const getServers = (

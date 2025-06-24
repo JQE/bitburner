@@ -3,6 +3,14 @@ import React from "react";
 import { GangInfo } from "../../types";
 import { GANGPORT } from "../../Constants";
 
+export const ActivityFocusName: string[] = [
+    "None",
+    "Money",
+    "Respect",
+    "Warfare",
+    "Balance",
+];
+
 export enum ActivityFocus {
     Money = 1,
     Respect,

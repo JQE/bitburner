@@ -21,6 +21,7 @@ export async function main(ns: NS) {
     let maxMoney = ns.getServerMaxMoney(target);
     let hackChance;
     let running = true;
+    let hasForumlas = ns.fileExists("Formulas.exe");
 
     let stage: Number = HackStage.Starting;
     const getServers = (
@@ -80,13 +81,24 @@ export async function main(ns: NS) {
             serverSim.hackDifficulty = serverSim.minDifficulty;
             pSim.hackDifficulty = pSim.minDifficulty;
 
-            previousScore =
-                (pSim.moneyMax / ns.getWeakenTime(pSim.hostname)) *
-                ns.hackAnalyzeChance(pSim.hostname);
-            currentScore =
-                (serverSim.moneyMax / ns.getWeakenTime(serverSim.hostname)) *
-                ns.hackAnalyzeChance(serverSim.hostname);
-
+            if (hasForumlas) {
+                previousScore =
+                    (pSim.moneyMax /
+                        ns.formulas.hacking.weakenTime(pSim, player)) *
+                    ns.formulas.hacking.hackChance(pSim, player);
+                currentScore =
+                    (serverSim.moneyMax /
+                        ns.formulas.hacking.weakenTime(serverSim, player)) *
+                    ns.formulas.hacking.hackChance(serverSim, player);
+            } else {
+                previousScore =
+                    (pSim.moneyMax / ns.getWeakenTime(pSim.hostname)) *
+                    ns.hackAnalyzeChance(pSim.hostname);
+                currentScore =
+                    (serverSim.moneyMax /
+                        ns.getWeakenTime(serverSim.hostname)) *
+                    ns.hackAnalyzeChance(serverSim.hostname);
+            }
             if (currentScore > previousScore) target = server;
         }
         return target;
@@ -117,6 +129,7 @@ export async function main(ns: NS) {
     };
 
     const getToolCount = () => {
+        hasForumlas = ns.fileExists("Formulas.exe");
         let numTools = 0;
         if (ns.fileExists("BruteSSH.exe")) {
             numTools++;
@@ -153,6 +166,25 @@ export async function main(ns: NS) {
             toolCount,
             []
         );
+    };
+
+    const checkStalled = () => {
+        let stillRunning = false;
+        for (let ii = 0; ii < servers.length; ii++) {
+            const server = servers[ii];
+            if (server !== "home") {
+                const procs = ns.ps(server);
+                for (let i = 0; i < procs.length; i++) {
+                    const proc = procs[i];
+                    if (WORKERS.includes(proc.filename)) {
+                        stillRunning = true;
+                        i = procs.length;
+                        ii = servers.length;
+                    }
+                }
+            }
+        }
+        return stillRunning;
     };
 
     const killall = () => {
@@ -193,12 +225,14 @@ export async function main(ns: NS) {
         let gThreads = 0;
 
         let wTime;
-
-        /*wTime = ns.formulas.hacking.weakenTime(
-            ns.getServer(target),
-            ns.getPlayer()
-        );*/
-        wTime = ns.getWeakenTime(target);
+        if (hasForumlas) {
+            wTime = ns.formulas.hacking.weakenTime(
+                ns.getServer(target),
+                ns.getPlayer()
+            );
+        } else {
+            wTime = ns.getWeakenTime(target);
+        }
         const gTime = wTime * 0.8;
 
         if (money < maxMoney) {
@@ -534,6 +568,7 @@ export async function main(ns: NS) {
 
     stage = HackStage.Starting;
     while (running) {
+        let lastBatch = 0;
         switch (stage) {
             case HackStage.Starting:
                 if (!isPrepped()) {
@@ -562,11 +597,18 @@ export async function main(ns: NS) {
             case HackStage.Batching:
                 if (dataPort.read() !== "NULL PORT DATA") {
                     hackingServers--;
+                    lastBatch = Date.now();
+                }
+                if (lastBatch !== 0 && lastBatch > Date.now() + 120000) {
+                    if (checkStalled()) {
+                        hackingServers = 0;
+                    }
                 }
                 if (hackingServers <= 0) {
                     running = false;
                     dataPort.clear();
                 }
+
                 break;
             case HackStage.Unknown:
             default:
@@ -587,7 +629,11 @@ export async function main(ns: NS) {
         hackInfo.Target = target;
         ns.clearPort(HACKPORT);
         ns.writePort(HACKPORT, JSON.stringify(hackInfo));
-        await ns.sleep(5);
+        if (stage == HackStage.Optimizing) {
+            await ns.sleep(1);
+        } else {
+            await ns.sleep(5);
+        }
     }
     dataPort.clear();
     killall();
