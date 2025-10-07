@@ -31,6 +31,36 @@ export const HackControl = ({ ns }: IHackControlProps) => {
         setIncludeNet(!includeNet);
     };
 
+    /*useEffect(() => {
+        let hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
+        let newHackPid = 0;
+        let newEnabled = true;
+        if (hackInfo.Enabled) {
+            setEnabled(hackInfo.Enabled);
+            setHackType(hackInfo.Type);
+            setIncludeNet(hackInfo.IncludeNet);
+            ns.scriptKill("Tools/HackManager/HackManager.js", "home");
+            let newHackPid = ns.exec(
+                "Tools/HackManager/HackManager.js",
+                "home"
+            );
+            if (newHackPid === 0) {
+                ns.print("Failed to run Hack script");
+                console.log("Failed to run Hack script");
+                newHackPid = -1;
+                newEnabled = false;
+            }
+            setHackPid(newHackPid);
+            setEnabled(newEnabled);
+            hackInfo = JSON.parse(ns.peek(HACKPORT));
+            hackInfo.Enabled = newEnabled;
+            hackInfo.Type = hackType;
+            hackInfo.IncludeNet = includeNet;
+            ns.clearPort(HACKPORT);
+            ns.writePort(HACKPORT, JSON.stringify(hackInfo));
+        }
+    }, []);*/
+
     const onSave = () => {
         setLoading(true);
         let newHackPid = hackPid;

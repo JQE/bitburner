@@ -33,15 +33,44 @@ export const ServerControl = ({ ns }: IServerControlProps) => {
     };
 
     const setShow = () => {
-        const serverInfo: ServerInfo = JSON.parse(ns.peek(SERVERPORT));
-        setSize(serverInfo.CurrentSize);
-        let ramSizes = [];
-        for (let i = serverInfo.CurrentSize; i <= maxRam; i *= 2) {
-            ramSizes.push(i);
+        try {
+            const serverInfo: ServerInfo = JSON.parse(ns.peek(SERVERPORT));
+            setSize(serverInfo.CurrentSize);
+            let ramSizes = [];
+            for (let i = serverInfo.CurrentSize; i <= maxRam; i *= 2) {
+                ramSizes.push(i);
+            }
+            setSizeList(ramSizes);
+            setShowModal(true);
+        } catch (e) {
+            ns.tprint(e);
         }
-        setSizeList(ramSizes);
-        setShowModal(true);
     };
+
+    /*useEffect(() => {
+        let serverInfo: ServerInfo = JSON.parse(ns.peek(SERVERPORT));
+        let newServerPid = -1;
+        let newEnabled = true;
+        if (serverInfo.Enabled) {
+            setEnabled(serverInfo.Enabled);
+            setSize(serverInfo.CurrentSize);
+            ns.scriptKill("Tools/ServerManager/ServerManager.js", "home");
+            newServerPid = ns.exec(
+                "Tools/ServerManager/ServerManager.js",
+                "home"
+            );
+            if (newServerPid === 0) {
+                ns.print("Failed to run Server script");
+                console.log("Failed to run Server script");
+                newServerPid = -1;
+                newEnabled = false;
+            }
+            setServerPid(newServerPid);
+            setEnabled(newEnabled);            
+            setShowModal(false);
+            setLoading(false);
+        }
+    }, []);*/
 
     const onSave = () => {
         setLoading(true);

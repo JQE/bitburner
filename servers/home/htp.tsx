@@ -44,6 +44,25 @@ export async function main(ns: NS) {
     const tm = new TailModal(ns, doc);
 
     const onQuit = () => {
+        /*const settings: Settings = {};
+        const lifeInfo = ns.peek(LIFEPORT);
+        if (lifeInfo !== "NULL PORT DATA") {
+            settings.Life = JSON.parse(lifeInfo);
+        }
+        const hackInfo = ns.peek(HACKPORT);
+        if (hackInfo !== "NULL PORT DATA") {
+            settings.Hack = JSON.parse(hackInfo);
+        }
+        //settings.Hacknet = JSON.parse(ns.peek(HACKNETPORT));
+        const gangInfo = ns.peek(GANGPORT);
+        if (gangInfo !== "NULL PORT DATA") {
+            settings.Gang = JSON.parse(gangInfo);
+        }
+        const serverInfo = ns.peek(SERVERPORT);
+        if (serverInfo !== "NULL PORT DATA") {
+            settings.Server = JSON.parse(serverInfo);
+        }
+        ns.write("settings.txt", JSON.stringify(settings), "w");*/
         running = false;
     };
 
@@ -119,7 +138,7 @@ export async function main(ns: NS) {
     ns.clearPort(LIFEPORT);
     ns.writePort(LIFEPORT, JSON.stringify(defaultLife));
 
-    /*const defaultHacknet: HacknetInfo = {
+    const defaultHacknet: HacknetInfo = {
         Enabled: false,
         Buy: false,
         UpgradeRam: false,
@@ -133,18 +152,18 @@ export async function main(ns: NS) {
         MaxNodes: 0,
     };
     ns.clearPort(HACKNETPORT);
-    ns.writePort(HACKNETPORT, JSON.stringify(defaultHacknet));*/
+    ns.writePort(HACKNETPORT, JSON.stringify(defaultHacknet));
 
-    /*const defaultSleeve: SleeveInfo = {
+    const defaultSleeve: SleeveInfo = {
         Enabled: false,
         Recovered: 0,
         Synchronized: 0,
         BuyAugs: false,
     };
     ns.clearPort(SLEEVEPORT);
-    ns.writePort(SLEEVEPORT, JSON.stringify(defaultSleeve));*/
+    ns.writePort(SLEEVEPORT, JSON.stringify(defaultSleeve));
 
-    /*if (ns.fileExists("settings.json")) {
+    /*if (ns.fileExists("settings.txt")) {
         const settings: Settings = JSON.parse(ns.read("settings.txt"));
         if (settings.Life) {
             ns.clearPort(LIFEPORT);
@@ -386,7 +405,7 @@ export async function main(ns: NS) {
         }
     };
 
-    /*const handleSleeveLog = () => {
+    const handleSleeveLog = () => {
         const sleeveInfo: SleeveInfo = JSON.parse(ns.peek(SLEEVEPORT));
         const sleeveCount = ns.sleeve.getNumSleeves();
         if (sleeveInfo.Enabled) {
@@ -398,9 +417,9 @@ export async function main(ns: NS) {
                 `Synced: \x1b[36m${sleeveInfo.Synchronized} / ${sleeveCount}`
             );
         }
-    };*/
+    };
 
-    /*const handleHacknetLog = () => {
+    const handleHacknetLog = () => {
         const hacknetInfo: HacknetInfo = JSON.parse(ns.peek(HACKNETPORT));
         if (hacknetInfo.Enabled) {
             ns.print(`\x1b[35mHacknet INfo`);
@@ -414,11 +433,11 @@ export async function main(ns: NS) {
                 `Ram | Min: \x1b[36m${hacknetInfo.minRam} \x1b[32mMax: \x1b[36m${hacknetInfo.maxRam}`
             );
         }
-    };*/
-    /*const sleevePid = ns.exec("Tools/Sleeves/SleeveManager.js", "home");
+    };
+    const sleevePid = ns.exec("Tools/Sleeves/SleeveManager.js", "home");
     if (sleevePid <= 0) {
         ns.tprint("Failed to start sleeve manager");
-    }*/
+    }
     while (running) {
         await ns.asleep(1000);
         ns.clearLog();
@@ -426,8 +445,8 @@ export async function main(ns: NS) {
         handleServerLog();
         handleHackLog();
         handleLifeLog();
-        //handleHacknetLog();
-        //handleSleeveLog();
+        handleHacknetLog();
+        handleSleeveLog();
         ns.print(``);
         ns.print(`\x1b[35mMain Info`);
         ns.print(`Heart: \x1b[36m${ns.formatNumber(ns.heart.break(), 3)}`);
@@ -456,5 +475,11 @@ export async function main(ns: NS) {
         ns.killall(server);
     });
     //ns.kill(sleevePid);
+
+    ns.clearPort(LIFEPORT);
+    ns.clearPort(HACKPORT);
+    ns.clearPort(GANGPORT);
+    ns.clearPort(SERVERPORT);
+    ns.clearPort(HACKNETPORT);
     ns.ui.closeTail();
 }
