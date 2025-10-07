@@ -29,6 +29,35 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
     const handleBuyAugs = () => {
         setBuyAugs(!buyAugs);
     };
+    /*useEffect(() => {
+        let lifeInfo: LifeInfo = JSON.parse(ns.peek(LIFEPORT));
+        let newEnabled = true;
+        if (lifeInfo.Enabled) {
+            setEnabled(lifeInfo.Enabled);
+            setBuyAugs(lifeInfo.BuyAugs);
+            setJoinGang(lifeInfo.JoinGang);
+            setMangeWork(lifeInfo.ManageWork);
+            ns.scriptKill("Tools/LifeManager/LifeManager.js", "home");
+            let newLifePid = ns.exec(
+                "Tools/LifeManager/LifeManager.js",
+                "home"
+            );
+            if (newLifePid === 0) {
+                ns.print("Failed to run Life script");
+                newLifePid = -1;
+                newEnabled = false;
+            }
+            setLifePid(newLifePid);
+            setEnabled(newEnabled);
+            lifeInfo = JSON.parse(ns.peek(LIFEPORT));
+            lifeInfo.Enabled = newEnabled;
+            lifeInfo.JoinGang = joinGang;
+            lifeInfo.ManageWork = manageWork;
+            lifeInfo.BuyAugs = buyAugs;
+            ns.clearPort(LIFEPORT);
+            ns.writePort(LIFEPORT, JSON.stringify(lifeInfo));
+        }
+    }, []);*/
 
     const onSave = () => {
         setLoading(true);

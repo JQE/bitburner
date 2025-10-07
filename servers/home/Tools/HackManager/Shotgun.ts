@@ -599,8 +599,8 @@ export async function main(ns: NS) {
                     hackingServers--;
                     lastBatch = Date.now();
                 }
-                if (lastBatch !== 0 && lastBatch > Date.now() + 120000) {
-                    if (checkStalled()) {
+                if (lastBatch !== 0 && lastBatch + 120000 < Date.now()) {
+                    if (!checkStalled()) {
                         hackingServers = 0;
                     }
                 }

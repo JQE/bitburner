@@ -196,37 +196,43 @@ export async function main(ns: NS) {
     ns.disableLog("ALL");
 
     const updateGangLog = () => {
-        const gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));
-        gangInfo.MemberCount = members.length;
-        gangInfo.Duration = duration;
-        gangInfo.BaseRep = baseRep;
-        const gang = ns.gang.getGangInformation();
-        gangInfo.MoneyGain = gang.moneyGainRate * 5;
-        gangInfo.Respect = gang.respect;
-        gangInfo.Power = gang.power;
-        gangInfo.Territory = gang.territory;
-        ns.clearPort(GANGPORT);
-        ns.writePort(GANGPORT, JSON.stringify(gangInfo));
+        const gangPortData = ns.peek(GANGPORT);
+        if (gangPortData !== "NULL PORT DATA") {
+            const gangInfo: GangInfo = JSON.parse(gangPortData);
+            gangInfo.MemberCount = members.length;
+            gangInfo.Duration = duration;
+            gangInfo.BaseRep = baseRep;
+            const gang = ns.gang.getGangInformation();
+            gangInfo.MoneyGain = gang.moneyGainRate * 5;
+            gangInfo.Respect = gang.respect;
+            gangInfo.Power = gang.power;
+            gangInfo.Territory = gang.territory;
+            ns.clearPort(GANGPORT);
+            ns.writePort(GANGPORT, JSON.stringify(gangInfo));
+        }
     };
 
     let duration = 1;
 
     while (gangInfo.Enabled) {
-        gangInfo = JSON.parse(dataport.peek());
-        if (ns.gang && ns.gang.inGang()) {
-            manageRecruitment();
-            respNum = 0;
-            moenyNum = 0;
-            warfareNum = 0;
-            members = ns.gang.getMemberNames();
-            members.forEach((member) => {
-                ProcessMember(ns.gang.getMemberInformation(member));
-            });
-            ns.clearLog();
-            updateGangLog();
-            duration = (await ns.gang.nextUpdate()) / 1000;
-        } else {
-            await ns.sleep(1000);
+        const gangPortData = ns.peek(GANGPORT);
+        if (gangPortData !== "NULL PORT DATA") {
+            gangInfo = JSON.parse(gangPortData);
+            if (ns.gang && ns.gang.inGang()) {
+                manageRecruitment();
+                respNum = 0;
+                moenyNum = 0;
+                warfareNum = 0;
+                members = ns.gang.getMemberNames();
+                members.forEach((member) => {
+                    ProcessMember(ns.gang.getMemberInformation(member));
+                });
+                ns.clearLog();
+                updateGangLog();
+                duration = (await ns.gang.nextUpdate()) / 1000;
+            } else {
+                await ns.sleep(1000);
+            }
         }
     }
 }

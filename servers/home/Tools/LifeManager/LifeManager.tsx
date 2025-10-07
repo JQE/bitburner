@@ -1,8 +1,14 @@
 import React from "react";
 import { LifeStages, MyFactionList } from "./types";
 import { NS } from "NetscriptDefinitions";
-import { LifeInfo, ServerInfo } from "../../types";
-import { LIFEPORT, SERVERPORT } from "../../Constants";
+import { LifeInfo, ServerInfo, Settings } from "../../types";
+import {
+    GANGPORT,
+    HACKNETPORT,
+    HACKPORT,
+    LIFEPORT,
+    SERVERPORT,
+} from "../../Constants";
 import { actionToString, findServerPath } from "../../utils";
 
 export async function main(ns: NS) {
@@ -11,14 +17,24 @@ export async function main(ns: NS) {
     let running = true;
     let joined = [];
     let toolCount = 0;
+    let haveFormulas = false;
+
+    const getTotalNFGs = (): number => {
+        const owned = ns.getResetInfo().ownedAugs.get("NeuroFlux Governor");
+        const queued = ns.singularity
+            .getOwnedAugmentations(true)
+            .filter((x) => x === "NeuroFlux Governor").length;
+        return owned + (queued > 1 ? queued - 1 : 0);
+    };
 
     const findFactionForThisReset = (): string => {
         let outFaction = "";
-        const allAugs = ns.singularity.getOwnedAugmentations(true);
+        const augCount = getTotalNFGs();
         let found = false;
         Object.keys(MyFactionList).forEach((loopFaction) => {
             if (found) return;
             const newFaction = MyFactionList[loopFaction];
+            const allAugs = ns.singularity.getOwnedAugmentations(true);
             newFaction.augs.forEach((aug) => {
                 if (found) return;
                 if (!allAugs.includes(aug)) {
@@ -26,6 +42,10 @@ export async function main(ns: NS) {
                     found = true;
                 }
             });
+            if (!found && newFaction.Count > augCount) {
+                outFaction = loopFaction;
+                found = true;
+            }
         });
         return outFaction;
     };
@@ -73,12 +93,22 @@ export async function main(ns: NS) {
                     (serverInfo.CurrentSize === 128 &&
                         serverInfo.AtRam === serverInfo.Max)
                 ) {
-                    lifeStage = LifeStages.Factions;
+                    if (
+                        ns.singularity.getFactionRep(faction) <
+                        MyFactionList[faction].rep
+                    ) {
+                        lifeStage = LifeStages.Factions;
+                    }
                 }
             }
         } else if (lifeStage === LifeStages.Factions) {
             // checking if i need to join a faction or change faction i work for
-            if (faction === undefined || faction === "") {
+            if (
+                faction === undefined ||
+                faction === "" ||
+                ns.singularity.getFactionRep(faction) >=
+                    MyFactionList[faction].rep
+            ) {
                 lifeStage = LifeStages.Crime;
             } else {
                 if (action.type !== "FACTION") {
@@ -94,15 +124,22 @@ export async function main(ns: NS) {
                         }
                     }
                 }
-                if (ns.singularity.getFactionFavor(faction) >= 150) {
-                    const repPer1000 = ns.formulas.reputation.repFromDonation(
-                        1000,
-                        ns.getPlayer()
-                    );
-                    const donateAmount =
-                        (MyFactionList[faction].rep / repPer1000) * 1000 + 100;
-                    if (ns.getServerMoneyAvailable("home") > donateAmount) {
-                        ns.singularity.donateToFaction(faction, donateAmount);
+                if (ns.fileExists("Formulas.exe")) {
+                    if (ns.singularity.getFactionFavor(faction) >= 150) {
+                        const repPer1000 =
+                            ns.formulas.reputation.repFromDonation(
+                                1000,
+                                ns.getPlayer()
+                            );
+                        const donateAmount =
+                            (MyFactionList[faction].rep / repPer1000) * 1000 +
+                            100;
+                        if (ns.getServerMoneyAvailable("home") > donateAmount) {
+                            ns.singularity.donateToFaction(
+                                faction,
+                                donateAmount
+                            );
+                        }
                     }
                 }
             }
@@ -129,18 +166,48 @@ export async function main(ns: NS) {
         // Now to see if i should install my augs, or try to buy more.
         const installedAugs = ns.singularity.getOwnedAugmentations();
         const allAugs = ns.singularity.getOwnedAugmentations(true);
-        const waitingAugs = allAugs.length - installedAugs.length;
+        let waitingAugs = allAugs.length - installedAugs.length;
+        const nfgCount = getTotalNFGs();
         let factionRep = 0;
+        let factionFavor = 0;
         if (faction !== undefined && faction !== "") {
             factionRep = ns.singularity.getFactionRep(faction);
+            factionFavor = ns.singularity.getFactionFavor(faction);
         }
-        if ((factionRep > 500000 && waitingAugs > 0) || waitingAugs >= 10) {
+        if (factionFavor < 150 && factionRep > 500000 && waitingAugs <= 0) {
+            const cost =
+                ns.singularity.getAugmentationPrice("NeuroFlux Governor");
+            if (ns.getServerMoneyAvailable("home") > cost) {
+                ns.singularity.purchaseAugmentation(
+                    faction,
+                    "NeuroFlux Governor"
+                );
+                waitingAugs = 1;
+            }
+        }
+        if (
+            (factionFavor < 150 && factionRep > 500000 && waitingAugs > 0) ||
+            (nfgCount >= MyFactionList[faction].Count &&
+                waitingAugs > MyFactionList[faction].augs.length)
+        ) {
             /*const settings: Settings = {};
-            settings.Life = JSON.parse(ns.peek(LIFEPORT));
-            settings.Hack = JSON.parse(ns.peek(HACKPORT));
-            settings.Hacknet = JSON.parse(ns.peek(HACKNETPORT));
-            settings.Gang = JSON.parse(ns.peek(GANGPORT));
-            settings.Server = JSON.parse(ns.peek(SERVERPORT));
+            const lifeInfo = ns.peek(LIFEPORT);
+            if (lifeInfo !== "NULL PORT DATA") {
+                settings.Life = JSON.parse(lifeInfo);
+            }
+            const hackInfo = ns.peek(HACKPORT);
+            if (hackInfo !== "NULL PORT DATA") {
+                settings.Hack = JSON.parse(hackInfo);
+            }
+            //settings.Hacknet = JSON.parse(ns.peek(HACKNETPORT));
+            const gangInfo = ns.peek(GANGPORT);
+            if (gangInfo !== "NULL PORT DATA") {
+                settings.Gang = JSON.parse(gangInfo);
+            }
+            const serverInfo = ns.peek(SERVERPORT);
+            if (serverInfo !== "NULL PORT DATA") {
+                settings.Server = JSON.parse(serverInfo);
+            }
             ns.write("settings.txt", JSON.stringify(settings), "w");*/
             ns.singularity.installAugmentations();
         } else {
@@ -226,6 +293,11 @@ export async function main(ns: NS) {
                 toolCount = 8;
             }
         }
+        if (!haveFormulas) {
+            if (!ns.fileExists("Formulas.exe")) {
+                ns.singularity.purchaseProgram("Formulas.exe");
+            }
+        }
 
         // Join a gang if we can and if we enabled it
         if (
@@ -265,7 +337,7 @@ export async function main(ns: NS) {
             ns.singularity.travelToCity("Sector-12");
         }
         // Buy our augs if we enabled it
-        if (lifeInfo.BuyAugs) {
+        if (lifeInfo.BuyAugs && faction !== "EndGame") {
             buyAugs();
         }
 
@@ -297,9 +369,8 @@ export async function main(ns: NS) {
                 }
             }
         }
-
-        const allAugs = ns.singularity.getOwnedAugmentations(true);
-        if (allAugs.includes("The Red Pill")) {
+        const ownedAugs = ns.singularity.getOwnedAugmentations(false);
+        if (ownedAugs.includes("The Red Pill")) {
             const server = ns.getServer("w0r1d_d43m0n");
             if (server.requiredHackingSkill < ns.getPlayer().skills.hacking) {
                 const path = findServerPath(ns, "w0r1d_d43m0n");
@@ -310,14 +381,14 @@ export async function main(ns: NS) {
                 await ns.singularity.installBackdoor();
             }
         }
+        const allAugs = ns.singularity.getOwnedAugmentations(true);
 
         // This is to updated our reporting threads.
         const action = ns.singularity.getCurrentWork();
         lifeInfo.Action = action !== null ? actionToString(action) : undefined;
         lifeInfo.Stage = lifeStage;
         lifeInfo.Faction = faction;
-        const ownedAugs = ns.singularity.getOwnedAugmentations(false).length;
-        const purchased = allAugs.length - ownedAugs;
+        const purchased = allAugs.length - ownedAugs.length;
         lifeInfo.ownedAugs = purchased;
         ns.clearPort(LIFEPORT);
         ns.writePort(LIFEPORT, JSON.stringify(lifeInfo));

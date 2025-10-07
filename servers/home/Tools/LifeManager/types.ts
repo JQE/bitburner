@@ -11,7 +11,6 @@ export interface FactionInfo {
         rep: number;
         augs: string[];
         Count: number;
-        Level: number;
         City: string;
         Backdoor: boolean;
         Server?: string;
@@ -27,16 +26,14 @@ export const MyFactionList: FactionInfo = {
             "ADR-V1 Pheromone Gene",
         ],
         Count: 7,
-        Level: 7,
         City: "Ishima",
         Backdoor: false,
     },
     "Sector-12": {
         rep: 50000,
         augs: ["Neuralstimulator", "CashRoot Starter Kit"],
-        Count: 8,
-        Level: 15,
         City: "Sector-12",
+        Count: 15,
         Backdoor: false,
     },
     CyberSec: {
@@ -48,8 +45,7 @@ export const MyFactionList: FactionInfo = {
             "Synaptic Enhancement Implant",
             "Neurotrainer I",
         ],
-        Count: 5,
-        Level: 20,
+        Count: 20,
         City: "Sector-12",
         Backdoor: true,
         Server: "CSEC",
@@ -65,8 +61,7 @@ export const MyFactionList: FactionInfo = {
             "Embedded Netburner Module",
             "Cranial Signal Processors - Gen III",
         ],
-        Count: 3,
-        Level: 23,
+        Count: 23,
         City: "Sector-12",
         Backdoor: true,
         Server: "avmnite-02h",
@@ -79,8 +74,7 @@ export const MyFactionList: FactionInfo = {
             "Cranial Signal Processors - Gen IV",
             "The Black Hand",
         ],
-        Count: 6,
-        Level: 29,
+        Count: 29,
         City: "Sector-12",
         Backdoor: true,
         Server: "I.I.I.I",
@@ -95,8 +89,7 @@ export const MyFactionList: FactionInfo = {
             "Cranial Signal Processors - Gen V",
             "Neural Accelerator",
         ],
-        Count: 4,
-        Level: 34,
+        Count: 33,
         Backdoor: true,
         Server: "run4theh111z",
         City: "Sector-12",
@@ -109,8 +102,15 @@ export const MyFactionList: FactionInfo = {
             "NEMEAN Subdermal Weave",
             "Synthetic Heart",
         ],
-        Count: 6,
-        Level: 40,
+        Count: 39,
+        Backdoor: false,
+        Server: "",
+        City: "Sector-12",
+    },
+    EndGame: {
+        rep: 99999999,
+        augs: [],
+        Count: 999,
         Backdoor: false,
         Server: "",
         City: "Sector-12",

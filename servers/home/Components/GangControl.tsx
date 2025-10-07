@@ -39,6 +39,46 @@ export const GangControl = ({ ns }: IGangControlProps) => {
         setActivity(selection);
     };
 
+    useEffect(() => {
+        let gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));
+        let newEnabled = true;
+        if (gangInfo.Enabled) {
+            setEnabled(gangInfo.Enabled);
+            setBuyAugs(gangInfo.BuyAugs);
+            setAscend(gangInfo.Ascend);
+            setBuy(gangInfo.BuyGear);
+            ns.scriptKill("Tools/Gangs/Gangs.js", "home");
+            let newGangPid = ns.exec("Tools/Gangs/Gangs.js", "home");
+            if (newGangPid <= 0) {
+                ns.print("Failed to run Gangs script");
+                console.log("Failed to run gang script");
+                newGangPid = -1;
+                newEnabled = false;
+            }
+            setEnabled(newEnabled);
+            setGangPid(newGangPid);
+            gangInfo = JSON.parse(ns.peek(GANGPORT));
+            gangInfo.Enabled = newEnabled;
+            gangInfo.BuyAugs = buyAugs;
+            gangInfo.BuyGear = buy;
+            gangInfo.Activity = activity;
+            gangInfo.Ascend = ascend;
+            ns.clearPort(GANGPORT);
+            ns.writePort(GANGPORT, JSON.stringify(gangInfo));
+        }
+    }, []);
+
+    /*useEffect(() => {
+        const gangInfo: GangInfo = JSON.parse(ns.peek(GANGPORT));
+        if (gangInfo.Enabled) {
+            setEnabled(gangInfo.Enabled);
+            setBuyAugs(gangInfo.BuyAugs);
+            setAscend(gangInfo.Ascend);
+            setBuy(gangInfo.BuyGear);
+            onSave();
+        }
+    }, []);*/
+
     const onSave = () => {
         setLoading(true);
         let newGangPid = gangPid;

@@ -55,7 +55,7 @@ export interface GangInfo {
     Enabled: boolean;
     BuyGear: boolean;
     BuyAugs: boolean;
-    Ascend: Boolean;
+    Ascend: boolean;
     Activity: ActivityFocus;
     Duration: number;
     MemberCount: number;
