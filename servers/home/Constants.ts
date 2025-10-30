@@ -5,3 +5,4 @@ export const BATCHPORT = 15;
 export const LIFEPORT = 16;
 export const HACKNETPORT = 17;
 export const SLEEVEPORT = 18;
+export const BBPORT = 19;
