@@ -4,6 +4,7 @@ import { TailModal } from "./Utils/TailModal";
 import { ControlPanel } from "./Components/ControlPanel";
 import Style from "../tailwind.css";
 import {
+    BladeBurnerInfo,
     GangInfo,
     HackInfo,
     HackStage,
@@ -23,6 +24,7 @@ import {
     LIFEPORT,
     HACKNETPORT,
     SLEEVEPORT,
+    BBPORT,
 } from "./Constants";
 import { ActivityFocus, ActivityFocusName } from "./Tools/Gangs/Gangs";
 import { LifeStages } from "./Tools/LifeManager/types";
@@ -92,6 +94,15 @@ export async function main(ns: NS) {
     };
     ns.clearPort(GANGPORT);
     ns.writePort(GANGPORT, JSON.stringify(defaultGang));
+
+    const defaultBB: BladeBurnerInfo = {
+        Enabled: false,
+        ActionType: "None",
+        ActionName: "None",
+        City: "Sector-12",
+    };
+    ns.clearPort(BBPORT);
+    ns.writePort(BBPORT, JSON.stringify(defaultBB));
 
     const defaultServer: ServerInfo = {
         Enabled: false,
@@ -257,6 +268,17 @@ export async function main(ns: NS) {
                         ? `Cost: \x1b[36m${ns.formatNumber(serverInfo.Cost, 2)}`
                         : ""
                 }`
+            );
+        }
+    };
+
+    const handleBBLog = () => {
+        const bbInfo: BladeBurnerInfo = JSON.parse(ns.peek(BBPORT));
+        if (bbInfo.Enabled) {
+            ns.print(`\x1b[35mBlade Burner Info`);
+            ns.print(`City: \x1b[36m${bbInfo.City}`);
+            ns.print(
+                `Action: \x1b[36m${bbInfo.ActionType} / ${bbInfo.ActionName}`
             );
         }
     };
@@ -438,6 +460,7 @@ export async function main(ns: NS) {
     if (sleevePid <= 0) {
         ns.tprint("Failed to start sleeve manager");
     }
+
     while (running) {
         await ns.asleep(1000);
         ns.clearLog();
@@ -447,6 +470,7 @@ export async function main(ns: NS) {
         handleLifeLog();
         handleHacknetLog();
         handleSleeveLog();
+        handleBBLog();
         ns.print(``);
         ns.print(`\x1b[35mMain Info`);
         ns.print(`Heart: \x1b[36m${ns.formatNumber(ns.heart.break(), 3)}`);

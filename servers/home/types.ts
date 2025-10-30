@@ -66,6 +66,13 @@ export interface GangInfo {
     Territory: number;
 }
 
+export interface BladeBurnerInfo {
+    Enabled: boolean;
+    City: string;
+    ActionType: string;
+    ActionName: string;
+}
+
 export interface LifeInfo {
     Enabled: boolean;
     Stage: LifeStages;
