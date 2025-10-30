@@ -10,16 +10,18 @@ export class ServerUtils {
     getServers(
         lambdaCondition = (hostname: string) => true,
         hostname = "home",
+        toolCount = 0,
         servers: string[] = [],
         visited: string[] = []
     ) {
         if (visited.includes(hostname)) return;
         visited.push(hostname);
+        this.nukeTarget(hostname, toolCount);
         if (lambdaCondition(hostname)) servers.push(hostname);
         const connectedNodes = this.ns.scan(hostname);
         if (hostname !== "home") connectedNodes.shift();
         for (const node of connectedNodes)
-            this.getServers(lambdaCondition, node, servers, visited);
+            this.getServers(lambdaCondition, node, toolCount, servers, visited);
         return servers;
     }
 

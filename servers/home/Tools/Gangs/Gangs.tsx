@@ -1,20 +1,24 @@
 import { GangMemberInfo } from "NetscriptDefinitions";
+import React from "react";
+import { TailModal } from "servers/home/Utils/TailModal";
+import Style from "../../../tailwind.css";
+import { GangControl } from "./Components/GangControl";
 
 export enum ActivityFocus {
     Money = 1,
-    Respect = 2,
-    Warfare = 3,
-    Balance = 4,
+    Respect,
+    Warfare,
+    Balance,
 }
 
 export async function main(ns: NS) {
     let members: string[] = ns.gang.getMemberNames();
-    const dataport = ns.getPortHandle(this.pid);
+    const dataport = ns.getPortHandle(ns.pid);
     dataport.clear();
     const equipment: string[] = [];
     const augs: string[] = [];
     const baseName = "Fredalina";
-    const baseJob = "Mug People";
+    let baseJob = "Mug People";
     let activity: ActivityFocus = ActivityFocus.Money;
     let baseRep = 0;
     let respNum = 0;
@@ -23,6 +27,26 @@ export async function main(ns: NS) {
 
     let buyAugs = false;
     let buyEquipment = false;
+
+    const onBuy = (): boolean => {
+        buyEquipment = !buyEquipment;
+        return buyEquipment;
+    };
+
+    const onBuyAugs = (): boolean => {
+        buyAugs = !buyAugs;
+        return buyAugs;
+    };
+
+    const onActivity = (selection: number): ActivityFocus => {
+        activity = selection;
+        return activity;
+    };
+
+    const onJob = (job: string): string => {
+        baseJob = job;
+        return baseJob;
+    };
 
     const eqp = ns.gang.getEquipmentNames();
     eqp.forEach((item) => {
@@ -68,8 +92,12 @@ export async function main(ns: NS) {
 
     const manageRecruitment = () => {
         if (ns.gang.canRecruitMember()) {
-            const name = `${baseName}${members.length}`;
-            ns.gang.recruitMember(name);
+            let name = `${baseName}${members.length}`;
+            let itr = 0;
+            while (!ns.gang.recruitMember(name)) {
+                ++itr;
+                name = `${baseName}${members.length + itr}`;
+            }
             members.push(name);
             ns.print(`Recrtuiting new member ${name}`);
         }
@@ -214,6 +242,37 @@ export async function main(ns: NS) {
         }
     };
 
+    /** Alias for document to prevent excessive RAM use */
+    const doc = (0, eval)("document") as Document;
+    ns.disableLog("ALL");
+    ns.tail();
+
+    const tm = new TailModal(ns, doc);
+
+    tm.renderCustomModal(
+        <>
+            <Style></Style>
+            <GangControl
+                ns={ns}
+                defaultActivity={activity}
+                onActivity={onActivity}
+                defaultBuy={buyEquipment}
+                onBuy={onBuy}
+                defaultBuyAugs={buyAugs}
+                onBuyAugs={onBuyAugs}
+                defaultJob={baseJob}
+                onJob={onJob}
+            ></GangControl>
+        </>,
+        "Gang Control Panel",
+        300
+    );
+
+    ns.atExit(() => {
+        ns.closeTail();
+    });
+    let duration = 1;
+
     while (dataport.empty()) {
         if (ns.gang.inGang()) {
             manageRecruitment();
@@ -225,23 +284,40 @@ export async function main(ns: NS) {
                 ProcessMember(ns.gang.getMemberInformation(member));
             });
             const gang = ns.gang.getGangInformation();
-            ns.print(`Have members: ${members.length}`);
-            ns.print(`Buying Gear: ${buyEquipment}`);
-            ns.print(`Buying Augments: ${buyAugs}`);
+            ns.clearLog();
+            ns.print(
+                `Have members: ${members.length}    Money: ${ns.formatNumber(
+                    gang.moneyGainRate * duration,
+                    2
+                )}/s`
+            );
+            ns.print(
+                `Buying Gear: ${buyEquipment}   Buying Augments: ${buyAugs}`
+            );
+            ns.print(``);
+            ns.print(
+                `Respect: ${ns.formatNumber(
+                    gang.respectGainRate * duration,
+                    2
+                )}/s    Wanted: ${ns.formatNumber(
+                    gang.wantedLevelGainRate * duration,
+                    2
+                )}/s`
+            );
             ns.print(
                 `Gang Rep: ${ns.formatNumber(
                     gang.respect,
                     2
-                )} : Required rep for next ascension: ${ns.formatNumber(
-                    baseRep,
-                    2
-                )}`
+                )} : Ascension: ${ns.formatNumber(baseRep, 2)}`
             );
             ns.print(
                 `Power: ${ns.formatNumber(
                     gang.power
                 )}   Territory: ${ns.formatPercent(gang.territory)}`
             );
+            duration = (await ns.gang.nextUpdate()) / 1000;
+        } else {
+            await ns.sleep(1000);
         }
     }
 }
