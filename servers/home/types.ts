@@ -1,3 +1,4 @@
+import { BladeBurnerStage } from "./Tools/BladeBurner/BladeBurner";
 import { ActivityFocus } from "./Tools/Gangs/Gangs";
 import { LifeStages } from "./Tools/LifeManager/types";
 
@@ -69,8 +70,9 @@ export interface GangInfo {
 export interface BladeBurnerInfo {
     Enabled: boolean;
     City: string;
-    ActionType: string;
+    ActionType: BladeBurnerStage;
     ActionName: string;
+    Duration: number;
 }
 
 export interface LifeInfo {

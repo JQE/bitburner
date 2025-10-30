@@ -28,6 +28,10 @@ import {
 } from "./Constants";
 import { ActivityFocus, ActivityFocusName } from "./Tools/Gangs/Gangs";
 import { LifeStages } from "./Tools/LifeManager/types";
+import {
+    BladeBurnerStage,
+    BladeBurnerStageNames,
+} from "./Tools/BladeBurner/BladeBurner";
 
 const localScripts = [
     "htp.js",
@@ -97,9 +101,10 @@ export async function main(ns: NS) {
 
     const defaultBB: BladeBurnerInfo = {
         Enabled: false,
-        ActionType: "None",
+        ActionType: BladeBurnerStage.None,
         ActionName: "None",
         City: "Sector-12",
+        Duration: 1,
     };
     ns.clearPort(BBPORT);
     ns.writePort(BBPORT, JSON.stringify(defaultBB));
@@ -278,7 +283,9 @@ export async function main(ns: NS) {
             ns.print(`\x1b[35mBlade Burner Info`);
             ns.print(`City: \x1b[36m${bbInfo.City}`);
             ns.print(
-                `Action: \x1b[36m${bbInfo.ActionType} / ${bbInfo.ActionName}`
+                `Action: \x1b[36m${
+                    BladeBurnerStageNames[bbInfo.ActionType]
+                } / ${bbInfo.ActionName}`
             );
         }
     };
