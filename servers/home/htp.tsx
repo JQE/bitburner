@@ -15,6 +15,7 @@ import {
     ServerStage,
     Settings,
     SleeveInfo,
+    StanekInfo,
 } from "./types";
 import { formatTime, lifeStageToString } from "./utils";
 import {
@@ -25,6 +26,7 @@ import {
     HACKNETPORT,
     SLEEVEPORT,
     BBPORT,
+    STANEKPORT,
 } from "./Constants";
 import { ActivityFocus, ActivityFocusName } from "./Tools/Gangs/Gangs";
 import { LifeStages } from "./Tools/LifeManager/types";
@@ -39,6 +41,10 @@ const localScripts = [
     "Tools/HackManager/HackManager.js",
     "Tools/ServerManager/ServerManager.js",
     "Tools/LifeManager/LifeManager.js",
+    "Tools/Hacknet/HacknetManager.js",
+    "Tools/Sleeves/SleeveManager.js",
+    "Tools/BladeBurner/BladeBurner.js",
+    "Tools/Stanek/StanekManager.js",
 ];
 
 export async function main(ns: NS) {
@@ -79,7 +85,7 @@ export async function main(ns: NS) {
             <ControlPanel ns={ns} onQuit={onQuit}></ControlPanel>
         </>,
         "Main Control Panel",
-        300
+        300,
     );
 
     const defaultGang: GangInfo = {
@@ -141,12 +147,20 @@ export async function main(ns: NS) {
     ns.clearPort(HACKPORT);
     ns.writePort(HACKPORT, JSON.stringify(defaultHack));
 
+    const defaultStanek: StanekInfo = {
+        Enabled: false,
+    };
+
+    ns.clearPort(STANEKPORT);
+    ns.writePort(STANEKPORT, JSON.stringify(defaultStanek));
+
     const defaultLife: LifeInfo = {
         Enabled: false,
         Stage: LifeStages.University,
         Action: undefined,
         Faction: undefined,
-        JoinGang: false,
+        JoinGang: true,
+        AllowTravel: false,
         ManageWork: true,
         BuyAugs: false,
         ownedAugs: 0,
@@ -213,15 +227,15 @@ export async function main(ns: NS) {
                 ns.print(
                     `Money: \x1b[36m${ns.formatNumber(
                         gangInfo.MoneyGain * gangInfo.Duration,
-                        2
-                    )}/s`
+                        2,
+                    )}/s`,
                 );
             } else {
                 ns.print(
-                    `Activity: \x1b[36m${ActivityFocusName[gangInfo.Activity]}`
+                    `Activity: \x1b[36m${ActivityFocusName[gangInfo.Activity]}`,
                 );
             }
-            ns.print(
+            /*ns.print(
                 `Gear: \x1b[36m${gangInfo.BuyGear}    \x1b[32mAugs: \x1b[36m${gangInfo.BuyAugs}`
             );
             ns.print(
@@ -232,14 +246,14 @@ export async function main(ns: NS) {
                     gangInfo.BaseRep,
                     2
                 )}`
-            );
+            );*/
             ns.print(
                 `Power: \x1b[36m${ns.formatNumber(
-                    gangInfo.Power
-                )} \x1b[32mAsc En: \x1b[36m${gangInfo.Ascend}`
+                    gangInfo.Power,
+                )} \x1b[32mAsc En: \x1b[36m${gangInfo.Ascend}`,
             );
             ns.print(
-                `Territory: \x1b[36m${ns.formatPercent(gangInfo.Territory)}`
+                `Territory: \x1b[36m${ns.formatPercent(gangInfo.Territory)}`,
             );
         }
     };
@@ -262,9 +276,9 @@ export async function main(ns: NS) {
                 default:
                     ns.print(`Something is wrong`);
             }
-            ns.print(`Message: \x1b[36m${serverInfo.Message}`);
+            //ns.print(`Message: \x1b[36m${serverInfo.Message}`);
             ns.print(
-                `Size: \x1b[36m${serverInfo.CurrentSize}gb / ${serverInfo.MaxSize}gb`
+                `Size: \x1b[36m${serverInfo.CurrentSize}gb / ${serverInfo.MaxSize}gb`,
             );
             ns.print(`Count: \x1b[36m${serverInfo.AtRam}/${serverInfo.Max}`);
             ns.print(
@@ -272,7 +286,7 @@ export async function main(ns: NS) {
                     serverInfo.Cost !== undefined
                         ? `Cost: \x1b[36m${ns.formatNumber(serverInfo.Cost, 2)}`
                         : ""
-                }`
+                }`,
             );
         }
     };
@@ -285,8 +299,15 @@ export async function main(ns: NS) {
             ns.print(
                 `Action: \x1b[36m${
                     BladeBurnerStageNames[bbInfo.ActionType]
-                } / ${bbInfo.ActionName}`
+                } / ${bbInfo.ActionName}`,
             );
+        }
+    };
+
+    const handleStanekLog = () => {
+        const stanekInfo: StanekInfo = JSON.parse(ns.peek(STANEKPORT));
+        if (stanekInfo.Enabled) {
+            ns.print(`\x1b[35mStanek Enabled`);
         }
     };
 
@@ -301,14 +322,14 @@ export async function main(ns: NS) {
         ns.print(
             `Security: \x1b[36m${ns.formatNumber(
                 security,
-                1
-            )} / ${ns.formatNumber(minSec, 1)}`
+                1,
+            )} / ${ns.formatNumber(minSec, 1)}`,
         );
         ns.print(
             `Money: \x1b[36m\$${ns.formatNumber(
                 money,
-                2
-            )} / \$${ns.formatNumber(maxMoney, 2)}`
+                2,
+            )} / \$${ns.formatNumber(maxMoney, 2)}`,
         );
         ns.print(`Current Tool Count: \x1b[36m${hackInfo.Tools}`);
     };
@@ -318,7 +339,7 @@ export async function main(ns: NS) {
         ns.print(`Server Count:\x1b[36m ${hackInfo.Count}`);
         ns.print(`Target:\x1b[36m ${hackInfo.Target}`);
         ns.print(
-            `Share Powre: \x1b[36m${ns.formatNumber(ns.getSharePower(), 4)}`
+            `Share Powre: \x1b[36m${ns.formatNumber(ns.getSharePower(), 4)}`,
         );
         ns.print(`Current Tool Count: \x1b[36m${hackInfo.Tools}`);
     };
@@ -330,8 +351,8 @@ export async function main(ns: NS) {
             if (hackInfo.TotalPrep !== undefined) {
                 ns.print(
                     `Total:\x1b[36m ${formatTime(
-                        hackInfo.TotalPrep - Date.now()
-                    )}`
+                        hackInfo.TotalPrep - Date.now(),
+                    )}`,
                 );
             }
         }
@@ -358,10 +379,10 @@ export async function main(ns: NS) {
         ns.print(`Progresss: \x1b[36m${outStage}`);
         if (hackInfo.Stage === HackStage.Optimizing) {
             ns.print(
-                `GreedStep: \x1b[36m${ns.formatNumber(hackInfo.GreedStep, 3)}`
+                `GreedStep: \x1b[36m${ns.formatNumber(hackInfo.GreedStep, 3)}`,
             );
             ns.print(`Best: \x1b[36m$${ns.formatNumber(hackInfo.Best, 2)}`);
-        }
+        } /*
         if (hackInfo.Stage === HackStage.Batching) {
             ns.print(
                 `Chance: \x1b[36m${ns.formatNumber(
@@ -372,25 +393,26 @@ export async function main(ns: NS) {
                     3
                 )}`
             );
+        }*/ else {
+            ns.print(`Thread Count: \x1b[36m${hackInfo.Count}`);
+            ns.print(`Target: \x1b[36m${hackInfo.Target}`);
+            const security = ns.getServerSecurityLevel(hackInfo.Target);
+            const minSec = ns.getServerMinSecurityLevel(hackInfo.Target);
+            const money = ns.getServerMoneyAvailable(hackInfo.Target);
+            const maxMoney = ns.getServerMaxMoney(hackInfo.Target);
+            ns.print(
+                `Security: \x1b[36m${ns.formatNumber(
+                    security,
+                    2,
+                )} / ${ns.formatNumber(minSec, 2)}`,
+            );
+            ns.print(
+                `Money: \x1b[36m\$${ns.formatNumber(
+                    money,
+                    2,
+                )} / \$${ns.formatNumber(maxMoney, 2)}`,
+            );
         }
-        ns.print(`Server Count: \x1b[36m${hackInfo.Count}`);
-        ns.print(`Target: \x1b[36m${hackInfo.Target}`);
-        const security = ns.getServerSecurityLevel(hackInfo.Target);
-        const minSec = ns.getServerMinSecurityLevel(hackInfo.Target);
-        const money = ns.getServerMoneyAvailable(hackInfo.Target);
-        const maxMoney = ns.getServerMaxMoney(hackInfo.Target);
-        ns.print(
-            `Security: \x1b[36m${ns.formatNumber(
-                security,
-                2
-            )} / ${ns.formatNumber(minSec, 2)}`
-        );
-        ns.print(
-            `Money: \x1b[36m\$${ns.formatNumber(
-                money,
-                2
-            )} / \$${ns.formatNumber(maxMoney, 2)}`
-        );
         ns.print(`Current Tool Count: \x1b[36m${hackInfo.Tools}`);
     };
 
@@ -421,16 +443,20 @@ export async function main(ns: NS) {
         const lifeInfo: LifeInfo = JSON.parse(ns.peek(LIFEPORT));
         if (lifeInfo.Enabled) {
             ns.print(`\x1b[35mLife Info`);
-            ns.print(`Stage: \x1b[36m${lifeStageToString(lifeInfo.Stage)}`);
             ns.print(
-                `Action: \x1b[36m${
+                `Stage: \x1b[36m${lifeStageToString(
+                    lifeInfo.Stage,
+                )}  \x1b[32mAction: \x1b[36m${
                     lifeInfo.Action ? lifeInfo.Action : "Unknown"
-                }`
+                }`,
             );
             if (lifeInfo.Faction !== undefined && lifeInfo.Faction !== "") {
-                ns.print(`Faction: \x1b[36m${lifeInfo.Faction}`);
+                ns.print(
+                    `Faction: \x1b[36m${lifeInfo.Faction}  \x1b[32mAugs: \x1b[36m${lifeInfo.ownedAugs}`,
+                );
+            } else {
+                ns.print(`Augs: \x1b[36m${lifeInfo.ownedAugs}`);
             }
-            ns.print(`Augs: \x1b[36m${lifeInfo.ownedAugs}`);
         }
     };
 
@@ -440,10 +466,10 @@ export async function main(ns: NS) {
         if (sleeveInfo.Enabled) {
             ns.print(`\x1b[35mSleeve Info`);
             ns.print(
-                `Recovered: \x1b[36m${sleeveInfo.Recovered} / ${sleeveCount}`
+                `Recovered: \x1b[36m${sleeveInfo.Recovered} / ${sleeveCount}`,
             );
             ns.print(
-                `Synced: \x1b[36m${sleeveInfo.Synchronized} / ${sleeveCount}`
+                `Synced: \x1b[36m${sleeveInfo.Synchronized} / ${sleeveCount}`,
             );
         }
     };
@@ -453,20 +479,16 @@ export async function main(ns: NS) {
         if (hacknetInfo.Enabled) {
             ns.print(`\x1b[35mHacknet INfo`);
             ns.print(
-                `Hashes: \x1b[36m${ns.formatNumber(hacknetInfo.NumHashes, 2)}`
+                `Hashes: \x1b[36m${ns.formatNumber(hacknetInfo.NumHashes, 2)}`,
             );
             ns.print(
-                `Nodes: \x1b[36m${hacknetInfo.NumNodes} / ${hacknetInfo.MaxNodes}`
+                `Nodes: \x1b[36m${hacknetInfo.NumNodes} / ${hacknetInfo.MaxNodes}`,
             );
             ns.print(
-                `Ram | Min: \x1b[36m${hacknetInfo.minRam} \x1b[32mMax: \x1b[36m${hacknetInfo.maxRam}`
+                `Ram | Min: \x1b[36m${hacknetInfo.minRam} \x1b[32mMax: \x1b[36m${hacknetInfo.maxRam}`,
             );
         }
     };
-    const sleevePid = ns.exec("Tools/Sleeves/SleeveManager.js", "home");
-    if (sleevePid <= 0) {
-        ns.tprint("Failed to start sleeve manager");
-    }
 
     while (running) {
         await ns.asleep(1000);
@@ -478,6 +500,7 @@ export async function main(ns: NS) {
         handleHacknetLog();
         handleSleeveLog();
         handleBBLog();
+        handleStanekLog();
         ns.print(``);
         ns.print(`\x1b[35mMain Info`);
         ns.print(`Heart: \x1b[36m${ns.formatNumber(ns.heart.break(), 3)}`);
@@ -487,7 +510,7 @@ export async function main(ns: NS) {
         lambdaCondition = (hostname: string) => true,
         hostname = "home",
         servers: string[] = [],
-        visited: string[] = []
+        visited: string[] = [],
     ) => {
         if (visited.includes(hostname)) return;
         visited.push(hostname);

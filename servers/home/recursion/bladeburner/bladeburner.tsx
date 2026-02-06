@@ -1,29 +1,17 @@
-import { BBPORT } from "../../Constants";
-import { BladeBurnerInfo } from "../../types";
-import { BBContracts, BBOperations, BBSkills, MySkillList } from "./types";
-
-export const BladeBurnerStageNames: string[] = [
-    "None",
-    "Stats",
-    "Contracts",
-    "Operations",
-    "Black Operations",
-];
-
-export enum BladeBurnerStage {
-    None = 0,
-    Stats = 1,
-    Contracts = 2,
-    Operations = 3,
-    BlackOps = 4,
-}
+import { BBPORT } from "../constants";
+import { BBInfo } from "../types";
+import {
+    BBContracts,
+    BBOperations,
+    BBSkills,
+    BladeBurnerStage,
+    MySkillList,
+} from "./types";
 
 export async function main(ns: NS) {
-    let bladeInfo: BladeBurnerInfo = JSON.parse(ns.peek(BBPORT));
-    let contracts = [];
-    let ops = [];
-    let first = true;
-    let currentCity = ns.enums.CityName.Sector12;
+    let contracts = ns.bladeburner.getContractNames();
+    let ops = ns.bladeburner.getOperationNames();
+    let currentCity = ns.bladeburner.getCity();
     let duration = 1;
     let currentStage: BladeBurnerStage = BladeBurnerStage.Stats;
     let currentAction = "none";
@@ -66,17 +54,18 @@ export async function main(ns: NS) {
             currentAction = "Prepping";
         }
     };
+
     const findContract = () => {
         for (let i = contracts.length - 1; i >= 0; i--) {
             const contract = contracts[i];
             const contractCount = ns.bladeburner.getActionCountRemaining(
                 "Contracts",
-                contract
+                contract,
             );
             if (contractCount >= 1) {
                 const chance = ns.bladeburner.getActionEstimatedSuccessChance(
                     "Contracts",
-                    contract
+                    contract,
                 );
                 if (chance[0] > 0.5) {
                     return contract;
@@ -102,11 +91,11 @@ export async function main(ns: NS) {
             const timeIn = ns.bladeburner.getActionCurrentTime();
             const timeMin = ns.bladeburner.getActionTime(
                 "Contracts",
-                currentAction as BBContracts
+                currentAction as BBContracts,
             );
             const count = ns.bladeburner.getActionCountRemaining(
                 "Contracts",
-                currentAction as BBContracts
+                currentAction as BBContracts,
             );
             if (timeIn > timeMin || count < 1) {
                 const contract = findContract();
@@ -125,13 +114,13 @@ export async function main(ns: NS) {
             if (op !== "Raid") {
                 const contractCount = ns.bladeburner.getActionCountRemaining(
                     "Operations",
-                    op
+                    op,
                 );
                 if (contractCount >= 1) {
                     const chance =
                         ns.bladeburner.getActionEstimatedSuccessChance(
                             "Operations",
-                            op
+                            op,
                         );
                     if (chance[0] > 0.5) {
                         return op;
@@ -162,11 +151,11 @@ export async function main(ns: NS) {
             const timeIn = ns.bladeburner.getActionCurrentTime();
             const timeMin = ns.bladeburner.getActionTime(
                 "Operations",
-                currentAction as BBOperations
+                currentAction as BBOperations,
             );
             const count = ns.bladeburner.getActionCountRemaining(
                 "Operations",
-                currentAction as BBOperations
+                currentAction as BBOperations,
             );
             if (timeIn > timeMin || count < 1) {
                 const op = findOperation();
@@ -190,7 +179,7 @@ export async function main(ns: NS) {
         if (nextOp !== null) {
             const chance = ns.bladeburner.getActionEstimatedSuccessChance(
                 "Black Operations",
-                nextOp.name
+                nextOp.name,
             );
             if (nextOp.rank <= rank && chance[0] > 0.75) {
                 return nextOp.name;
@@ -240,7 +229,7 @@ export async function main(ns: NS) {
         ) {
             ns.bladeburner.startAction(
                 "General",
-                "Hyperbolic Regeneration Chamber"
+                "Hyperbolic Regeneration Chamber",
             );
             currentAction = "Healing";
         }
@@ -280,7 +269,7 @@ export async function main(ns: NS) {
         const chaos = ns.bladeburner.getCityChaos(currentCity);
         const chance = ns.bladeburner.getActionEstimatedSuccessChance(
             "Operations",
-            "Assassination"
+            "Assassination",
         );
         const dif = chance[1] - chance[0];
         let synthCount = 10000000000;
@@ -339,7 +328,7 @@ export async function main(ns: NS) {
                 break;
             case BladeBurnerStage.None:
             default:
-                ns.tprint("Incorrect Blade Burner Stage found");
+                ns.print("Incorrect Blade Burner Stage found");
                 break;
         }
     };
@@ -351,7 +340,7 @@ export async function main(ns: NS) {
         Object.keys(MySkillList).forEach((loopSkill) => {
             if (MySkillList[loopSkill].Stage <= currentStage) {
                 const level = ns.bladeburner.getSkillLevel(
-                    loopSkill as BBSkills
+                    loopSkill as BBSkills,
                 );
                 if (level < skillLevel && level < MySkillList[loopSkill].Max) {
                     upgradeSkill = loopSkill;
@@ -361,7 +350,7 @@ export async function main(ns: NS) {
         });
         if (upgradeSkill !== "none") {
             const cost = ns.bladeburner.getSkillUpgradeCost(
-                upgradeSkill as BBSkills
+                upgradeSkill as BBSkills,
             );
             if (cost < points) {
                 ns.bladeburner.upgradeSkill(upgradeSkill as BBSkills);
@@ -424,44 +413,34 @@ export async function main(ns: NS) {
         }
         return switchFail;
     };
+    ns.disableLog("ALL");
+    ns.clearPort(BBPORT);
 
-    const updateBladeBurnerLog = () => {
-        const bladePortData = ns.peek(BBPORT);
-        if (bladePortData !== "NULL PORT DATA") {
-            const bladeInfo: BladeBurnerInfo = JSON.parse(bladePortData);
-            bladeInfo.Duration = duration;
-            bladeInfo.City = currentCity;
-            bladeInfo.ActionName = currentAction;
-            bladeInfo.ActionType = currentStage;
-            ns.clearPort(BBPORT);
-            ns.writePort(BBPORT, JSON.stringify(bladeInfo));
-        }
-    };
-
-    while (bladeInfo.Enabled) {
-        const bladePortData = ns.peek(BBPORT);
-        if (bladePortData !== "NULL PORT DATA") {
-            bladeInfo = JSON.parse(bladePortData);
-            updateBladeBurnerLog();
-            if (ns.bladeburner.inBladeburner()) {
-                if (first) {
-                    contracts = ns.bladeburner.getContractNames();
-                    ops = ns.bladeburner.getOperationNames();
-                    currentCity = ns.bladeburner.getCity();
-                    first = false;
-                }
-                ProcessSkills();
-                const citySwitch = ProcessCity();
-
-                const doingGeneral = ProcessGeneral(citySwitch);
-                if (!doingGeneral) {
-                    ProcessAction();
-                }
-                duration = (await ns.bladeburner.nextUpdate()) / 1000;
-            } else {
-                processStats();
-                await ns.asleep(1000);
+    while (true) {
+        if (ns.bladeburner.inBladeburner()) {
+            ProcessSkills();
+            const citySwitch = ProcessCity();
+            const doingGeneral = ProcessGeneral(citySwitch);
+            if (!doingGeneral) {
+                ProcessAction();
             }
+            ns.clearLog();
+            const BBInfo: BBInfo = {
+                Action: currentAction,
+                City: currentCity,
+            };
+            ns.clearPort(BBPORT);
+            ns.writePort(BBPORT, BBInfo);
+            duration = (await ns.bladeburner.nextUpdate()) / 1000;
+        } else {
+            processStats();
+            const BBInfo: BBInfo = {
+                Action: "Stats",
+                City: currentCity,
+            };
+            ns.clearPort(BBPORT);
+            await ns.writePort(BBPORT, BBInfo);
+            await ns.asleep(1000);
         }
     }
 }

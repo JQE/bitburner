@@ -1,6 +1,6 @@
 import { NetscriptPort } from "NetscriptDefinitions";
-import { BATCHPORT, HACKPORT } from "servers/home/Constants";
-import { HackInfo, HackStage } from "servers/home/types";
+import { BATCHPORT, HACKPORT } from "servers/home/recursion/constants";
+import { HackInfo, HackStage } from "servers/home/recursion/types";
 import { COSTS, SCRIPTS, WORKERS } from "./BatchTool/Constants";
 
 export async function main(ns: NS) {
@@ -23,16 +23,15 @@ export async function main(ns: NS) {
     let running = true;
     let hasForumlas = ns.fileExists("Formulas.exe");
 
-    let stage: Number = HackStage.Starting;
+    let stage: number = HackStage.Starting;
     const getServers = (
         lambdaCondition = (hostname: string) => true,
-        includeHacknet = false,
         hostname = "home",
         toolCount = 0,
         servers: string[] = [],
-        visited: string[] = []
+        visited: string[] = [],
     ) => {
-        if (hostname.startsWith("hacknet") && !includeHacknet) {
+        if (hostname.startsWith("hacknet")) {
             return;
         }
         if (visited.includes(hostname)) return;
@@ -41,21 +40,14 @@ export async function main(ns: NS) {
         const connectedNodes = ns.scan(hostname);
         if (hostname !== "home") connectedNodes.shift();
         for (const node of connectedNodes)
-            getServers(
-                lambdaCondition,
-                includeHacknet,
-                node,
-                toolCount,
-                servers,
-                visited
-            );
+            getServers(lambdaCondition, node, toolCount, servers, visited);
         return servers;
     };
 
     const copyScripts = (
         server: string,
         scripts: string[],
-        overwrite = false
+        overwrite = false,
     ) => {
         for (const script of scripts) {
             if (
@@ -150,7 +142,6 @@ export async function main(ns: NS) {
     };
 
     const hackServers = () => {
-        const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
         servers = getServers(
             (server) => {
                 if (server === "home") return true;
@@ -161,10 +152,9 @@ export async function main(ns: NS) {
                 target = checkTarget(server, target);
                 return ns.hasRootAccess(server);
             },
-            hackInfo.IncludeNet,
             "home",
             toolCount,
-            []
+            [],
         );
     };
 
@@ -226,7 +216,7 @@ export async function main(ns: NS) {
         if (hasForumlas) {
             wTime = ns.formulas.hacking.weakenTime(
                 ns.getServer(target),
-                ns.getPlayer()
+                ns.getPlayer(),
             );
         } else {
             wTime = ns.getWeakenTime(target);
@@ -266,7 +256,7 @@ export async function main(ns: NS) {
                     target,
                     0,
                     BATCHPORT,
-                    true
+                    true,
                 );
                 if (!w1Pid)
                     throw new Error(`Failed to start weaken threads ${server}`);
@@ -286,7 +276,7 @@ export async function main(ns: NS) {
                     target,
                     wTime + 5 - gTime,
                     BATCHPORT,
-                    true
+                    true,
                 );
                 if (!gPid) throw new Error("Failed to start grow threads");
                 prepServers++;
@@ -305,11 +295,11 @@ export async function main(ns: NS) {
                     target,
                     10,
                     BATCHPORT,
-                    true
+                    true,
                 );
                 if (!w2Pid)
                     throw new Error(
-                        `Failed to start weaken2 threads ${server} ${w2Threads}`
+                        `Failed to start weaken2 threads ${server} ${w2Threads}`,
                     );
 
                 prepServers++;
@@ -347,17 +337,17 @@ export async function main(ns: NS) {
         const hPercent = ns.hackAnalyze(target);
         const hThreads = Math.max(
             Math.floor(ns.hackAnalyzeThreads(target, amount)),
-            1
+            1,
         );
         const tGreed = hPercent * hThreads;
         const gThreads = Math.max(
             Math.ceil(
                 ns.growthAnalyze(
                     server,
-                    maxMoney / (maxMoney - maxMoney * tGreed)
-                ) * 1.01
+                    maxMoney / (maxMoney - maxMoney * tGreed),
+                ) * 1.01,
             ),
-            1
+            1,
         );
         const wThreads1 = Math.max(Math.ceil((hThreads * 0.002) / 0.05), 1);
         const wThreads2 = Math.max(Math.ceil((gThreads * 0.004) / 0.05), 1);
@@ -385,15 +375,15 @@ export async function main(ns: NS) {
         const amount = maxMoney * greedStep;
         const hThreads = Math.max(
             Math.floor(ns.hackAnalyzeThreads(target, amount)),
-            1
+            1,
         );
         const tGreed = hPercent * hThreads;
         // 1% overestimation here too. Always make sure your calculations match.
         const gThreads = Math.ceil(
             ns.growthAnalyze(
                 target,
-                maxMoney / (maxMoney - maxMoney * tGreed)
-            ) * 1.01
+                maxMoney / (maxMoney - maxMoney * tGreed),
+            ) * 1.01,
         );
 
         if (Math.max(hThreads, gThreads) <= maxThreads) {
@@ -432,17 +422,17 @@ export async function main(ns: NS) {
         const hPercent = ns.hackAnalyze(target);
         const hThreads = Math.max(
             Math.floor(ns.hackAnalyzeThreads(target, amount)),
-            1
+            1,
         );
         const tGreed = hPercent * hThreads;
         const gThreads = Math.max(
             Math.ceil(
                 ns.growthAnalyze(
                     target,
-                    maxMoney / (maxMoney - maxMoney * tGreed)
-                ) * 1.01
+                    maxMoney / (maxMoney - maxMoney * tGreed),
+                ) * 1.01,
             ),
-            1
+            1,
         );
         const wThreads1 = Math.max(Math.ceil((hThreads * 0.002) / 0.05), 1);
         const wThreads2 = Math.max(Math.ceil((gThreads * 0.004) / 0.05), 1);
@@ -465,12 +455,12 @@ export async function main(ns: NS) {
                 target,
                 wTime - 5 - hTime,
                 BATCHPORT,
-                true
+                true,
             );
             if (hpid <= 0) {
                 error = `Failed to launch hack`;
                 console.log(
-                    `PID: ${hpid} Batches: ${batchCount} Server ${server} Ram: ${availRam}`
+                    `PID: ${hpid} Batches: ${batchCount} Server ${server} Ram: ${availRam}`,
                 );
                 hackingServers--;
                 batchCount = 0;
@@ -484,12 +474,12 @@ export async function main(ns: NS) {
                 target,
                 0,
                 BATCHPORT,
-                true
+                true,
             );
             if (w1pid <= 0) {
                 error = `Failed to launch w1`;
                 console.log(
-                    `Batches: ${batchCount} Server ${server} Rma: ${availRam}`
+                    `Batches: ${batchCount} Server ${server} Rma: ${availRam}`,
                 );
                 hackingServers--;
                 batchCount = 0;
@@ -504,12 +494,12 @@ export async function main(ns: NS) {
                 target,
                 wTime + 5 - gTime,
                 BATCHPORT,
-                true
+                true,
             );
             if (gpid <= 0) {
                 error = `Failed to launch grow`;
                 console.log(
-                    `Batches: ${batchCount} Server ${server} Rma: ${availRam}`
+                    `Batches: ${batchCount} Server ${server} Rma: ${availRam}`,
                 );
                 hackingServers--;
                 batchCount = 0;
@@ -524,12 +514,12 @@ export async function main(ns: NS) {
                 target,
                 10,
                 BATCHPORT,
-                true
+                true,
             );
             if (w2pid <= 0) {
                 error = `Failed to launch w2`;
                 console.log(
-                    `Batches: ${batchCount} Server ${server} Rma: ${availRam}`
+                    `Batches: ${batchCount} Server ${server} Rma: ${availRam}`,
                 );
                 batchCount = 0;
                 hackingServers--;
@@ -556,16 +546,14 @@ export async function main(ns: NS) {
     hackServers();
     hackChance = ns.hackAnalyzeChance(target);
     maxMoney = ns.getServerMaxMoney(target);
-    let hackInfoClear: HackInfo = JSON.parse(ns.peek(HACKPORT));
-    hackInfoClear.Best = 0;
-    hackInfoClear.Chance = 0;
-    hackInfoClear.Count = 0;
-    hackInfoClear.Greed = 0;
-    hackInfoClear.Prep = 0;
-    hackInfoClear.Stage = HackStage.Starting;
-    hackInfoClear.Target = target;
-    hackInfoClear.Tools = toolCount;
-    hackInfoClear.TotalPrep = 0;
+    const hackInfoClear: HackInfo = {
+        Count: 0,
+        Prep: 0,
+        TotalPrep: 0,
+        Tools: 0,
+        Stage: 0,
+        Target: "joesguns",
+    };
     ns.clearPort(HACKPORT);
     ns.writePort(HACKPORT, JSON.stringify(hackInfoClear));
 
@@ -607,20 +595,16 @@ export async function main(ns: NS) {
                 stage = HackStage.Starting;
         }
 
-        const hackInfo: HackInfo = JSON.parse(ns.peek(HACKPORT));
-        hackInfo.Stage = stage;
-        hackInfo.Count =
-            stage === HackStage.Prepping ? prepServers : hackingServers;
-        hackInfo.Greed = greed;
-        hackInfo.GreedStep = greedStep;
-        hackInfo.Best = best;
-        hackInfo.Chance = hackChance;
-        hackInfo.Prep = prepTime;
-        hackInfo.TotalPrep = prepThreadsLeft > 0 ? totalPrepTime : undefined;
-        hackInfo.Tools = toolCount;
-        hackInfo.Target = target;
+        const hackInfo: HackInfo = {
+            Count: HackStage.Prepping ? prepServers : hackingServers,
+            Prep: prepTime,
+            TotalPrep: prepThreadsLeft > 0 ? totalPrepTime : 0,
+            Tools: toolCount,
+            Stage: stage,
+            Target: target,
+        };
         ns.clearPort(HACKPORT);
-        ns.writePort(HACKPORT, JSON.stringify(hackInfo));
+        ns.writePort(HACKPORT, hackInfo);
         if (stage == HackStage.Optimizing) {
             await ns.sleep(1);
         } else {

@@ -1,14 +1,8 @@
 import React from "react";
 import { LifeStages, MyFactionList } from "./types";
 import { NS } from "NetscriptDefinitions";
-import { LifeInfo, ServerInfo, Settings } from "../../types";
-import {
-    GANGPORT,
-    HACKNETPORT,
-    HACKPORT,
-    LIFEPORT,
-    SERVERPORT,
-} from "../../Constants";
+import { LifeInfo, ServerInfo } from "../../types";
+import { LIFEPORT, SERVERPORT } from "../../Constants";
 import { actionToString, findServerPath } from "../../utils";
 
 export async function main(ns: NS) {
@@ -50,6 +44,18 @@ export async function main(ns: NS) {
         return outFaction;
     };
     const faction: string = findFactionForThisReset();
+
+    const maxFactionRep = (): number => {
+        const fac = MyFactionList[faction];
+        let repRet = 0;
+        fac.augs.forEach((aug, index) => {
+            const cost = ns.singularity.getAugmentationRepReq(aug);
+            if (cost > repRet) {
+                repRet = cost;
+            }
+        });
+        return repRet;
+    };
 
     const manageWork = () => {
         let action = ns.singularity.getCurrentWork();
@@ -94,8 +100,7 @@ export async function main(ns: NS) {
                         serverInfo.AtRam === serverInfo.Max)
                 ) {
                     if (
-                        ns.singularity.getFactionRep(faction) <
-                        MyFactionList[faction].rep
+                        ns.singularity.getFactionRep(faction) < maxFactionRep()
                     ) {
                         lifeStage = LifeStages.Factions;
                     }
@@ -106,8 +111,7 @@ export async function main(ns: NS) {
             if (
                 faction === undefined ||
                 faction === "" ||
-                ns.singularity.getFactionRep(faction) >=
-                    MyFactionList[faction].rep
+                ns.singularity.getFactionRep(faction) >= maxFactionRep()
             ) {
                 lifeStage = LifeStages.Crime;
             } else {
@@ -132,8 +136,7 @@ export async function main(ns: NS) {
                                 ns.getPlayer()
                             );
                         const donateAmount =
-                            (MyFactionList[faction].rep / repPer1000) * 1000 +
-                            100;
+                            (maxFactionRep() / repPer1000) * 1000 + 100;
                         if (ns.getServerMoneyAvailable("home") > donateAmount) {
                             ns.singularity.donateToFaction(
                                 faction,
@@ -324,17 +327,19 @@ export async function main(ns: NS) {
                 }
             }
         }
-        if (
-            !joined.includes("Tian Di Hui") &&
-            faction === "Tian Di Hui" &&
-            ns.getPlayer().city !== "Ishima"
-        ) {
-            ns.singularity.travelToCity("Ishima");
-        } else if (
-            faction !== "Tian Di Hui" &&
-            ns.getPlayer().city !== "Sector-12"
-        ) {
-            ns.singularity.travelToCity("Sector-12");
+        if (lifeInfo.AllowTravel) {
+            if (
+                !joined.includes("Tian Di Hui") &&
+                faction === "Tian Di Hui" &&
+                ns.getPlayer().city !== "Ishima"
+            ) {
+                ns.singularity.travelToCity("Ishima");
+            } else if (
+                faction !== "Tian Di Hui" &&
+                ns.getPlayer().city !== "Sector-12"
+            ) {
+                ns.singularity.travelToCity("Sector-12");
+            }
         }
         // Buy our augs if we enabled it
         if (lifeInfo.BuyAugs && faction !== "EndGame") {

@@ -6,6 +6,7 @@ import { LifeControl } from "./LifeControl";
 import { HacknetControl } from "./HacknetControl";
 import { SleeveControl } from "./SleeveControl";
 import { BladeControl } from "./BladeControl";
+import { StanekControl } from "./StanekControl";
 
 interface IControlPanelProps {
     ns: NS;
@@ -23,6 +24,7 @@ export const ControlPanel = ({ ns, onQuit }: IControlPanelProps) => {
                 <HacknetControl ns={ns} />
                 <SleeveControl ns={ns} />
                 <BladeControl ns={ns} />
+                <StanekControl ns={ns} />
                 <button
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-fulll"
                     onClick={onQuit}

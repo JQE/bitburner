@@ -8,7 +8,6 @@ export enum LifeStages {
 
 export interface FactionInfo {
     [name: string]: {
-        rep: number;
         augs: string[];
         Count: number;
         City: string;
@@ -19,7 +18,6 @@ export interface FactionInfo {
 
 export const MyFactionList: FactionInfo = {
     "Tian Di Hui": {
-        rep: 75000,
         augs: [
             "Neuroreceptor Management Implant",
             "Social Negotiation Assistant (S.N.A)",
@@ -30,14 +28,12 @@ export const MyFactionList: FactionInfo = {
         Backdoor: false,
     },
     "Sector-12": {
-        rep: 50000,
         augs: ["Neuralstimulator", "CashRoot Starter Kit"],
         City: "Sector-12",
         Count: 15,
         Backdoor: false,
     },
     CyberSec: {
-        rep: 18750,
         augs: [
             "Cranial Signal Processors - Gen I",
             "Cranial Signal Processors - Gen II",
@@ -51,7 +47,6 @@ export const MyFactionList: FactionInfo = {
         Server: "CSEC",
     },
     NiteSec: {
-        rep: 112500,
         augs: [
             "DataJack",
             "Neurotrainer II",
@@ -67,7 +62,6 @@ export const MyFactionList: FactionInfo = {
         Server: "avmnite-02h",
     },
     "The Black Hand": {
-        rep: 175000,
         augs: [
             "Embedded Netburner Module Core Implant",
             "Enhanced Myelin Sheathing",
@@ -80,7 +74,6 @@ export const MyFactionList: FactionInfo = {
         Server: "I.I.I.I",
     },
     BitRunners: {
-        rep: 1000000,
         augs: [
             "Embedded Netburner Module Core Implant",
             "Embedded Netburner Module Core V2 Upgrade",
@@ -95,7 +88,6 @@ export const MyFactionList: FactionInfo = {
         City: "Sector-12",
     },
     Daedalus: {
-        rep: 2500000,
         augs: [
             "Synfibril Muscle",
             "The Red Pill",
@@ -108,7 +100,6 @@ export const MyFactionList: FactionInfo = {
         City: "Sector-12",
     },
     EndGame: {
-        rep: 99999999,
         augs: [],
         Count: 999,
         Backdoor: false,

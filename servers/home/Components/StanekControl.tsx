@@ -1,45 +1,41 @@
-import React, { MouseEvent, useEffect, useState } from "react";
-import { ActivityFocus } from "../Tools/Gangs/Gangs";
-import { BladeBurnerInfo } from "../types";
-import { BBPORT } from "../Constants";
+import React, { useEffect, useState } from "react";
+import { StanekInfo } from "../types";
+import { STANEKPORT } from "../Constants";
 
-interface IBladeControlProps {
+interface IStanekControlProps {
     ns: NS;
 }
 
-export const BladeControl = ({ ns }: IBladeControlProps) => {
+export const StanekControl = ({ ns }: IStanekControlProps) => {
     const [showModal, setShowModal] = useState(false);
     const [enabled, setEnabled] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [bladePid, setBladePid] = useState(-1);
+    const [stanekPid, setStanekPid] = useState(-1);
 
     const handleEnabled = () => {
         setEnabled(!enabled);
     };
 
     useEffect(() => {
-        let bladeInfo: BladeBurnerInfo = JSON.parse(ns.peek(BBPORT));
+        let stanekInfo: StanekInfo = JSON.parse(ns.peek(STANEKPORT));
         let newEnabled = true;
-        if (bladeInfo.Enabled) {
-            setEnabled(bladeInfo.Enabled);
+        if (stanekInfo.Enabled) {
+            setEnabled(stanekInfo.Enabled);
 
-            ns.scriptKill("Tools/BladeBurner/BladeBurner.js", "home");
-            let newBladePid = ns.exec(
-                "Tools/BladeBurner/BladeBurner.js",
-                "home"
-            );
+            ns.scriptKill("Tools/Stanek/StanekManager.js", "home");
+            let newBladePid = ns.exec("Tools/Stanek/StanekManager.js", "home");
             if (newBladePid <= 0) {
-                ns.print("Failed to run Blade Burner script");
-                console.log("Failed to run Blade Burner script");
+                ns.print("Failed to run Stanek script");
+                console.log("Failed to run Stanek script");
                 newBladePid = -1;
                 newEnabled = false;
             }
             setEnabled(newEnabled);
-            setBladePid(newBladePid);
-            bladeInfo = JSON.parse(ns.peek(BBPORT));
-            bladeInfo.Enabled = newEnabled;
-            ns.clearPort(BBPORT);
-            ns.writePort(BBPORT, JSON.stringify(bladeInfo));
+            setStanekPid(newBladePid);
+            stanekInfo = JSON.parse(ns.peek(STANEKPORT));
+            stanekInfo.Enabled = newEnabled;
+            ns.clearPort(STANEKPORT);
+            ns.writePort(STANEKPORT, JSON.stringify(stanekInfo));
         }
     }, []);
 
@@ -56,30 +52,30 @@ export const BladeControl = ({ ns }: IBladeControlProps) => {
 
     const onSave = () => {
         setLoading(true);
-        let newBladePid = bladePid;
+        let newStanekPid = stanekPid;
         let newEnabled = enabled;
         if (newEnabled === true) {
-            ns.scriptKill("Tools/BladeBurner/BladeBurner.js", "home");
-            newBladePid = ns.exec("Tools/BladeBurner/BladeBurner.js", "home");
-            if (newBladePid <= 0) {
-                ns.print("Failed to run Gangs script");
-                console.log("Failed to run gang script");
-                newBladePid = -1;
+            ns.scriptKill("Tools/Stanek/StanekManager.js", "home");
+            newStanekPid = ns.exec("Tools/Stanek/StanekManager.js", "home");
+            if (newStanekPid <= 0) {
+                ns.print("Failed to run Stanek script");
+                console.log("Failed to run Stanek script");
+                newStanekPid = -1;
                 newEnabled = false;
             }
         } else {
-            if (newBladePid !== 0) {
-                ns.scriptKill("Tools/BladeBurner/BladeBurner.js", "home");
-                newBladePid = -1;
+            if (newStanekPid !== 0) {
+                ns.scriptKill("Tools/Stanek/StanekManager.js", "home");
+                newStanekPid = -1;
                 newEnabled = false;
             }
         }
         setEnabled(newEnabled);
-        setBladePid(newBladePid);
-        const bladeInfo: BladeBurnerInfo = JSON.parse(ns.peek(BBPORT));
-        bladeInfo.Enabled = newEnabled;
-        ns.clearPort(BBPORT);
-        ns.writePort(BBPORT, JSON.stringify(bladeInfo));
+        setStanekPid(newStanekPid);
+        const stanekInfo: StanekInfo = JSON.parse(ns.peek(STANEKPORT));
+        stanekInfo.Enabled = newEnabled;
+        ns.clearPort(STANEKPORT);
+        ns.writePort(STANEKPORT, JSON.stringify(stanekInfo));
         setShowModal(false);
         setLoading(false);
     };
@@ -91,7 +87,7 @@ export const BladeControl = ({ ns }: IBladeControlProps) => {
                 type="button"
                 onClick={() => setShowModal(true)}
             >
-                Blade Burner
+                Stanek
             </button>
             {showModal ? (
                 <>

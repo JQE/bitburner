@@ -8,6 +8,9 @@ export enum ServerStage {
     Capacity,
     Unknown,
 }
+export interface StanekInfo {
+    Enabled: boolean;
+}
 
 export interface ServerInfo {
     Stage: ServerStage;
@@ -81,6 +84,7 @@ export interface LifeInfo {
     Action: string;
     Faction: string;
     JoinGang: boolean;
+    AllowTravel: boolean;
     ManageWork: boolean;
     BuyAugs: boolean;
     ownedAugs: number;

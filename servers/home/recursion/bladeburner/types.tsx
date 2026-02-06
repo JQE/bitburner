@@ -1,5 +1,18 @@
-import { BladeBurnerStage } from "./BladeBurner";
+export const BladeBurnerStageNames: string[] = [
+    "None",
+    "Stats",
+    "Contracts",
+    "Operations",
+    "Black Operations",
+];
 
+export enum BladeBurnerStage {
+    None = 0,
+    Stats = 1,
+    Contracts = 2,
+    Operations = 3,
+    BlackOps = 4,
+}
 export interface SkillInfo {
     [name: string]: {
         Max: number;

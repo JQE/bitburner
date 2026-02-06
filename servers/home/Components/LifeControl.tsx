@@ -12,7 +12,7 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
     const [enabled, setEnabled] = useState(false);
     const [loading, setLoading] = useState(false);
     const [lifePid, setLifePid] = useState(-1);
-    const [joinGang, setJoinGang] = useState(false);
+    const [allowTravel, setAllowTravelGang] = useState(false);
     const [manageWork, setMangeWork] = useState(true);
     const [buyAugs, setBuyAugs] = useState(false);
 
@@ -20,8 +20,8 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
         setEnabled(!enabled);
     };
 
-    const handleJoinGang = () => {
-        setJoinGang(!joinGang);
+    const handleAllowTravelGang = () => {
+        setAllowTravelGang(!allowTravel);
     };
     const handleManageWork = () => {
         setMangeWork(!manageWork);
@@ -82,7 +82,8 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
         setEnabled(newEnabled);
         const lifeInfo: LifeInfo = JSON.parse(ns.peek(LIFEPORT));
         lifeInfo.Enabled = newEnabled;
-        lifeInfo.JoinGang = joinGang;
+        lifeInfo.AllowTravel = allowTravel;
+        lifeInfo.JoinGang = true;
         lifeInfo.ManageWork = manageWork;
         lifeInfo.BuyAugs = buyAugs;
         ns.clearPort(LIFEPORT);
@@ -145,13 +146,13 @@ export const LifeControl = ({ ns }: ILifeControlProps) => {
                                             </button>
                                             <button
                                                 className={`text-white font-bold py-2 px-4 rounded w-full ${
-                                                    joinGang
+                                                    allowTravel
                                                         ? "bg-red-500"
                                                         : "bg-green-500"
                                                 }`}
-                                                onClick={handleJoinGang}
+                                                onClick={handleAllowTravelGang}
                                             >
-                                                Join Gang
+                                                Travel
                                             </button>
                                             <button
                                                 className={`text-white font-bold py-2 px-4 rounded w-full ${
